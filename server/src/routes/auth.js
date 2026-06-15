@@ -466,36 +466,23 @@ router.post(
  * GET /api/auth/me
  * Retrieve profile information for current session user
  */
-router.get("/me", requireAuth, (req, res) => {
-    if (req.user.id === 0) {
-        return res.status(200).json({
-            data: req.user,
-        });
+router.get('/me', requireAuth, (req, res) => {
+    try {
+      if (req.user.role === 'admin') {
+        return res.status(200).json({ data: req.user });
+      }
+      const profile = usersModel.getFullUserProfile(req.user.id);
+      if (!profile) {
+        return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
+      }
+      if (profile.status === 'banned') {
+        return res.status(403).json({ error: { code: 'ACCOUNT_BANNED', message: 'This account has been banned' } });
+      }
+      return res.status(200).json({ data: profile });
+    } catch (error) {
+      console.error('Failed to fetch current user:', error.message);
+      return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'An error occurred while fetching user info' } });
     }
-
-    const freshUser = usersModel.findById(req.user.id);
-    if (!freshUser) {
-        return res.status(404).json({
-            error: {
-                code: "NOT_FOUND",
-                message: "User profile not found",
-            },
-        });
-    }
-
-    // Extra status check if updated in DB after token sign
-    if (freshUser.status === "banned") {
-        return res.status(403).json({
-            error: {
-                code: "ACCOUNT_BANNED",
-                message: "This account has been banned",
-            },
-        });
-    }
-
-    return res.status(200).json({
-        data: formatUser(freshUser),
-    });
-});
+  });
 
 module.exports = router;

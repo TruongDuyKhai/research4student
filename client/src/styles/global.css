@@ -26,7 +26,6 @@ input, select, textarea {
   font-family: inherit;
 }
 
-/* Off-canvas mobile drawer styles */
 .hamburger-btn {
   display: none;
   background: none;
@@ -49,35 +48,37 @@ input, select, textarea {
   }
 
   .sidebar {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     height: 100vh;
     width: 240px;
+    background: var(--color-surface) !important;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
-    z-index: 1000;
+    z-index: 1100 !important;
     overflow-y: auto;
   }
 
   .sidebar.sidebar-open {
-    transform: translateX(0);
+    transform: translateX(0) !important;
   }
 
   .admin-sidebar {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     height: 100vh;
     width: 240px !important;
+    background: var(--color-surface) !important;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
-    z-index: 1000;
+    z-index: 1100 !important;
     overflow-y: auto;
   }
 
   .admin-sidebar.sidebar-open {
-    transform: translateX(0);
+    transform: translateX(0) !important;
   }
 
   .admin-sidebar.sidebar-open .admin-brand-name,
@@ -91,7 +92,7 @@ input, select, textarea {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
-    z-index: 999;
+    z-index: 1050 !important;
   }
 
   /* Reset layout offsets/margins on mobile */

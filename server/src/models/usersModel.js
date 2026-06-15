@@ -1,4 +1,4 @@
-const { usersDb } = require('../db/connections');
+const { usersDb, filesDb } = require('../db/connections');
 
 /**
  * Find user by email
@@ -135,6 +135,32 @@ function getTeacherProfile(userId) {
   return usersDb.prepare('SELECT * FROM teacher_profiles WHERE user_id = ?').get(userId);
 }
 
+function getFullUserProfile(userId) {
+  const profile = usersDb.prepare(`
+    SELECT 
+      u.id, u.role, u.email, u.must_change_password, u.username, u.display_name, 
+      u.avatar_file_id, u.bio, u.language_pref, u.theme_pref, u.status, u.created_at, u.updated_at,
+      tp.employee_code, tp.department
+    FROM users u
+    LEFT JOIN teacher_profiles tp ON u.id = tp.user_id
+    WHERE u.id = ?
+  `).get(userId);
+
+  if (profile) {
+    profile.avatar_url = null;
+    if (profile.avatar_file_id) {
+      const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(profile.avatar_file_id);
+      if (file) profile.avatar_url = file.cdn_url;
+    }
+    if (profile.role !== 'teacher') {
+      delete profile.employee_code;
+      delete profile.department;
+    }
+    profile.must_change_password = !!profile.must_change_password;
+  }
+  return profile;
+}
+
 module.exports = {
   findByEmail,
   findById,
@@ -145,5 +171,6 @@ module.exports = {
   createTeacher,
   updateUser,
   setPasswordHash,
-  getTeacherProfile
+  getTeacherProfile,
+  getFullUserProfile
 };
