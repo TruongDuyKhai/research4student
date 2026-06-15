@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Calendar, BookOpen, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import client from '../api/client';
+import Avatar from '../components/Avatar';
 import './PublicProfilePage.css';
 
 const PublicProfilePage = () => {
@@ -71,13 +72,12 @@ const PublicProfilePage = () => {
         
         {/* Top Profile Header Block */}
         <div className="public-profile-header">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={profile.display_name} className="public-avatar" />
-          ) : (
-            <div className="public-avatar-placeholder">
-              {profile.display_name ? profile.display_name.charAt(0).toUpperCase() : '?'}
-            </div>
-          )}
+          <Avatar
+            avatarUrl={profile.avatar_url}
+            name={profile.display_name || profile.username}
+            size={140}
+            className="public-avatar"
+          />
 
           <div className="public-user-meta">
             <div className="display-name-row">

@@ -17,6 +17,7 @@ import {
   Shield,
   Menu
 } from 'lucide-react';
+import Avatar from '../components/Avatar';
 import './MainLayout.css';
 
 const MainLayout = () => {
@@ -177,9 +178,11 @@ const MainLayout = () => {
                   className="avatar-btn" 
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                  <div className="avatar-fallback">
-                    {user.display_name ? user.display_name.charAt(0).toUpperCase() : 'U'}
-                  </div>
+                  <Avatar
+                    avatarUrl={user.avatar_url}
+                    name={user.display_name || user.username}
+                    size={32}
+                  />
                   <span className="username-text">
                     {user.display_name || user.username || 'User'}
                   </span>

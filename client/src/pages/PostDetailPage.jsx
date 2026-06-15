@@ -6,6 +6,7 @@ import { ArrowLeft, Heart, MessageSquare, Flag, Send, CornerDownRight, Calendar 
 import client from '../api/client';
 import Turnstile from '../components/Turnstile';
 import ReportModal from '../components/ReportModal';
+import Avatar from '../components/Avatar';
 import './PostDetailPage.css';
 
 // Recursive Comment Node Component
@@ -61,13 +62,12 @@ const CommentNode = ({ comment, postId, user, onReplySuccess, onReport }) => {
       <div className="comment-card">
         {/* Comment Header */}
         <div className="comment-header">
-          {author.avatar_url ? (
-            <img src={author.avatar_url} alt={author.display_name} className="comment-user-avatar" />
-          ) : (
-            <div className="comment-user-avatar-placeholder">
-              {author.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            avatarUrl={author.avatar_url}
+            name={author.display_name || author.username}
+            size={32}
+            className="comment-user-avatar"
+          />
           
           <div className="comment-user-info">
             <span className="comment-user-name">{author.display_name}</span>
@@ -381,13 +381,12 @@ const PostDetailPage = () => {
         
         {/* Header author details */}
         <div className="detailed-post-header">
-          {author.avatar_url ? (
-            <img src={author.avatar_url} alt={author.display_name} className="post-detail-avatar" />
-          ) : (
-            <div className="post-detail-avatar-placeholder">
-              {author.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            avatarUrl={author.avatar_url}
+            name={author.display_name || author.username}
+            size={48}
+            className="post-detail-avatar"
+          />
           
           <div className="post-detail-user-meta">
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

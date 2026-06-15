@@ -10,6 +10,7 @@ import client from '../api/client';
 import Turnstile from '../components/Turnstile';
 import ProjectFormModal from '../components/ProjectFormModal';
 import ReportModal from '../components/ReportModal';
+import Avatar from '../components/Avatar';
 import './CommunityPage.css';
 
 const CommunityPage = ({ defaultTab }) => {
@@ -508,13 +509,12 @@ const CommunityPage = ({ defaultTab }) => {
                   <div key={post.id} className="post-feed-card">
                     {/* User profile card header */}
                     <div className="post-card-header">
-                      {author.avatar_url ? (
-                        <img src={author.avatar_url} alt={author.display_name} className="post-user-avatar" />
-                      ) : (
-                        <div className="post-user-avatar-placeholder">
-                          {author.display_name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <Avatar
+                        avatarUrl={author.avatar_url}
+                        name={author.display_name || author.username}
+                        size={44}
+                        className="post-user-avatar"
+                      />
                       
                       <div className="post-user-meta">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

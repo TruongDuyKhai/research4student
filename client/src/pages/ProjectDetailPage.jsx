@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import client from '../api/client';
 import ReportModal from '../components/ReportModal';
+import Avatar from '../components/Avatar';
 import './ProjectDetailPage.css';
 
 const ProjectDetailPage = () => {
@@ -497,13 +498,12 @@ const ProjectDetailPage = () => {
                   return (
                     <div key={post.id} className="post-feed-card">
                       <div className="post-card-header">
-                        {author.avatar_url ? (
-                          <img src={author.avatar_url} alt={author.display_name} className="post-user-avatar" />
-                        ) : (
-                          <div className="post-user-avatar-placeholder">
-                            {author.display_name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        <Avatar
+                          avatarUrl={author.avatar_url}
+                          name={author.display_name || author.username}
+                          size={44}
+                          className="post-user-avatar"
+                        />
                         <div className="post-user-meta">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span className="post-user-display-name">{author.display_name}</span>
@@ -643,13 +643,12 @@ const ProjectDetailPage = () => {
               {members.map((m) => (
                 <div key={m.user_id} className="member-strip-item">
                   <div className="member-info-col">
-                    {m.avatar_url ? (
-                      <img src={m.avatar_url} alt={m.display_name} className="member-avatar" />
-                    ) : (
-                      <div className="member-avatar-placeholder">
-                        {m.display_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <Avatar
+                      avatarUrl={m.avatar_url}
+                      name={m.display_name || m.username}
+                      size={32}
+                      className="member-avatar"
+                    />
                     <div className="member-details">
                       <span className="member-display-name">{m.display_name}</span>
                       <span className="member-username">@{m.username}</span>

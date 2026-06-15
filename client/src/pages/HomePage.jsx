@@ -13,6 +13,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import client from '../api/client';
+import Avatar from '../components/Avatar';
 import './HomePage.css';
 
 const HomePage = () => {
@@ -180,17 +181,12 @@ const HomePage = () => {
                     onClick={() => navigate(`/community/posts/${post.id}`)}
                   >
                     <div className="post-item-header">
-                      {post.author?.avatar_url ? (
-                        <img 
-                          src={post.author.avatar_url} 
-                          alt={post.author.display_name} 
-                          className="post-item-avatar" 
-                        />
-                      ) : (
-                        <div className="post-item-avatar-fallback">
-                          {post.author?.display_name ? post.author.display_name.charAt(0).toUpperCase() : 'U'}
-                        </div>
-                      )}
+                      <Avatar
+                        avatarUrl={post.author?.avatar_url}
+                        name={post.author?.display_name || post.author?.username}
+                        size={24}
+                        className="post-item-avatar"
+                      />
                       <span className="post-item-author">
                         {post.author?.display_name || post.author?.username || 'User'}
                       </span>

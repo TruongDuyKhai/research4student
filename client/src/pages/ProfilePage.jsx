@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Camera, Lock, Eye, CheckCircle2, AlertCircle, User, Key, Settings, Globe, Palette } from 'lucide-react';
 import client from '../api/client';
 import './ProfilePage.css';
+import Avatar from '../components/Avatar';
 import ImageCropperModal from '../components/ImageCropperModal';
 
 const ProfilePage = () => {
@@ -189,13 +190,12 @@ const ProfilePage = () => {
         {/* Left Side: Avatar Panel */}
         <div className="avatar-card-panel">
           <div className="avatar-preview-container">
-            {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.display_name} className="profile-large-avatar" />
-            ) : (
-              <div className="profile-large-avatar-placeholder">
-                {user.display_name ? user.display_name.charAt(0).toUpperCase() : '?'}
-              </div>
-            )}
+            <Avatar
+              avatarUrl={user.avatar_url}
+              name={user.display_name || user.username}
+              size={140}
+              className="profile-large-avatar"
+            />
             
             {/* Upload Hover Overlay */}
             <div className="avatar-upload-overlay" onClick={triggerAvatarSelect}>
