@@ -327,3 +327,62 @@
     margin-top: 16px;
   }
 }
+
+/* Edit and Delete Actions for Subject and Topic */
+.subject-header .subject-actions {
+  display: none;
+}
+
+.subject-header:hover .subject-actions {
+  display: flex;
+}
+
+.topic-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.topic-item-row .topic-btn {
+  flex-grow: 1;
+  padding-right: 42px; /* Leave space for actions on hover */
+}
+
+.topic-actions {
+  display: none;
+  position: absolute;
+  right: 4px;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--color-surface);
+  padding-left: 4px;
+}
+
+.topic-item-row:hover .topic-actions {
+  display: flex;
+}
+
+.btn-edit-subject, .btn-delete-subject, .btn-edit-topic, .btn-delete-topic {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-edit-subject:hover, .btn-edit-topic:hover {
+  color: var(--color-primary);
+  background-color: var(--color-primary-bg);
+}
+
+.btn-delete-subject:hover, .btn-delete-topic:hover {
+  color: var(--color-danger);
+  background-color: #fee2e2;
+}

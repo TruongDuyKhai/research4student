@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { slugify } from '../utils/slugify';
 import client from '../api/client';
 import './ResourceFormModal.css'; // Reuse modal styles
 
-const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
-  const [name, setName] = useState('');
+const SubjectFormModal = ({ isOpen, onClose, onSuccess, subjectToEdit }) => {
+  const { t } = useTranslation();
+  const [name, setName] = useState(subjectToEdit ? subjectToEdit.name : '');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -17,7 +19,7 @@ const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
 
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setErrorMsg('Subject name is required.');
+      setErrorMsg(t('knowledge.subjectModal.nameLabel'));
       return;
     }
 
@@ -25,13 +27,21 @@ const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
     setSubmitting(true);
 
     try {
-      await client.post('/knowledge/subjects', { name: trimmedName, slug });
+      if (subjectToEdit) {
+        await client.patch(`/knowledge/subjects/${subjectToEdit.id}`, { name: trimmedName, slug });
+      } else {
+        await client.post('/knowledge/subjects', { name: trimmedName, slug });
+      }
       setName('');
       onSuccess();
       onClose();
     } catch (err) {
-      console.error('Failed to create subject:', err);
-      const msg = err.response?.data?.error?.message || 'Failed to create subject. The slug may already exist.';
+      console.error('Failed to save subject:', err);
+      const msg = err.response?.status === 403
+        ? t('knowledge.subjectModal.errorForbidden')
+        : err.response?.status === 409
+          ? t('knowledge.subjectModal.errorConflict')
+          : (err.response?.data?.error?.message || t('knowledge.subjectModal.errorConflict'));
       setErrorMsg(msg);
     } finally {
       setSubmitting(false);
@@ -42,7 +52,9 @@ const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
     <div className="modal-overlay">
       <div className="modal-container" style={{ maxWidth: '400px' }}>
         <div className="modal-header">
-          <h3 className="modal-title">New Subject</h3>
+          <h3 className="modal-title">
+            {subjectToEdit ? t('knowledge.subjectModal.titleEdit') : t('knowledge.subjectModal.titleNew')}
+          </h3>
           <button className="btn-modal-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -56,7 +68,7 @@ const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="form-group">
-            <label className="form-label">Subject Name *</label>
+            <label className="form-label">{t('knowledge.subjectModal.nameLabel')}</label>
             <input 
               type="text" 
               className="form-input" 
@@ -81,14 +93,16 @@ const SubjectFormModal = ({ isOpen, onClose, onSuccess }) => {
               onClick={onClose}
               disabled={submitting}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button 
               type="submit" 
               className="btn-modal-submit"
               disabled={submitting}
             >
-              {submitting ? 'Creating...' : 'Create'}
+              {submitting 
+                ? (subjectToEdit ? t('knowledge.subjectModal.saving') : t('knowledge.subjectModal.creating')) 
+                : (subjectToEdit ? t('knowledge.subjectModal.saveBtn') : t('knowledge.subjectModal.createBtn'))}
             </button>
           </div>
         </form>

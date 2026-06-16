@@ -52,5 +52,37 @@
     "communityForum": "Community Forum",
     "signInToJoin": "Sign in to join the discussion",
     "goToCommunity": "Go to Community"
+  },
+  "knowledge": {
+    "subjectModal": {
+      "titleNew": "New Subject",
+      "titleEdit": "Edit Subject",
+      "nameLabel": "Subject Name *",
+      "createBtn": "Create",
+      "saveBtn": "Save",
+      "creating": "Creating...",
+      "saving": "Saving...",
+      "errorConflict": "Failed to save subject. The slug may already exist.",
+      "errorForbidden": "You do not have permission to modify this subject."
+    },
+    "topicModal": {
+      "titleNew": "New Topic",
+      "titleEdit": "Edit Topic",
+      "nameLabel": "Topic Name *",
+      "createBtn": "Create",
+      "saveBtn": "Save",
+      "creating": "Creating...",
+      "saving": "Saving...",
+      "errorConflict": "Failed to save topic. The slug may already exist under this subject.",
+      "errorForbidden": "You do not have permission to modify this topic."
+    },
+    "deleteSubjectConfirm": "Are you sure you want to delete subject \"{{name}}\"? All topics and articles inside will also be deleted.",
+    "deleteSubjectSuccess": "Subject deleted successfully.",
+    "deleteSubjectError": "Failed to delete subject: {{error}}",
+    "deleteTopicConfirm": "Are you sure you want to delete topic \"{{name}}\"? All articles inside will also be deleted.",
+    "topicDeletedSuccess": "Topic deleted successfully.",
+    "deleteTopicError": "Failed to delete topic: {{error}}",
+    "errorForbiddenAction": "You do not have permission to perform this action.",
+    "errorGeneral": "An unexpected error occurred. Please try again."
   }
 }

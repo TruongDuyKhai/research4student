@@ -52,5 +52,37 @@
     "communityForum": "Diễn đàn cộng đồng",
     "signInToJoin": "Đăng nhập để tham gia thảo luận",
     "goToCommunity": "Đến Diễn đàn"
+  },
+  "knowledge": {
+    "subjectModal": {
+      "titleNew": "Chủ đề mới",
+      "titleEdit": "Sửa Chủ đề",
+      "nameLabel": "Tên Chủ đề *",
+      "createBtn": "Tạo",
+      "saveBtn": "Lưu",
+      "creating": "Đang tạo...",
+      "saving": "Đang lưu...",
+      "errorConflict": "Không thể lưu chủ đề. Slug có thể đã tồn tại.",
+      "errorForbidden": "Bạn không có quyền sửa chủ đề này."
+    },
+    "topicModal": {
+      "titleNew": "Chuyên đề mới",
+      "titleEdit": "Sửa Chuyên đề",
+      "nameLabel": "Tên Chuyên đề *",
+      "createBtn": "Tạo",
+      "saveBtn": "Lưu",
+      "creating": "Đang tạo...",
+      "saving": "Đang lưu...",
+      "errorConflict": "Không thể lưu chuyên đề. Slug có thể đã tồn tại trong chủ đề này.",
+      "errorForbidden": "Bạn không có quyền sửa chuyên đề này."
+    },
+    "deleteSubjectConfirm": "Bạn có chắc chắn muốn xóa chủ đề \"{{name}}\"? Tất cả các chuyên đề và bài viết bên trong cũng sẽ bị xóa.",
+    "deleteSubjectSuccess": "Xóa chủ đề thành công.",
+    "deleteSubjectError": "Không thể xóa chủ đề: {{error}}",
+    "deleteTopicConfirm": "Bạn có chắc chắn muốn xóa chuyên đề \"{{name}}\"? Tất cả các bài viết bên trong cũng sẽ bị xóa.",
+    "topicDeletedSuccess": "Xóa chuyên đề thành công.",
+    "deleteTopicError": "Không thể xóa chuyên đề: {{error}}",
+    "errorForbiddenAction": "Bạn không có quyền thực hiện hành động này.",
+    "errorGeneral": "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại."
   }
 }

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, BookOpen, ChevronDown, ChevronRight, File, FileText } from 'lucide-react';
+import { Plus, BookOpen, ChevronDown, ChevronRight, File, FileText, Pencil, Trash2 } from 'lucide-react';
 import client from '../api/client';
 import SubjectFormModal from '../components/SubjectFormModal';
 import TopicFormModal from '../components/TopicFormModal';
@@ -37,6 +37,8 @@ const KnowledgePage = () => {
   const [articleModalOpen, setArticleModalOpen] = useState(false);
   
   const [activeSubjectForTopicAdd, setActiveSubjectForTopicAdd] = useState(null);
+  const [subjectToEdit, setSubjectToEdit] = useState(null);
+  const [topicToEdit, setTopicToEdit] = useState(null);
 
   // Fetch subjects on mount
   const fetchSubjects = async () => {
@@ -50,8 +52,26 @@ const KnowledgePage = () => {
       setLoadingSubjects(false);
     }
   };
+  // Fetch articles under selected topic
+  const fetchArticles = async (topicId, activePage = page) => {
+    if (!topicId) return;
+    setLoadingArticles(true);
+    try {
+      const res = await client.get(`/knowledge/articles?topic_id=${topicId}&page=${activePage}&limit=${limit}`);
+      setArticles(res.data.data || []);
+      const pag = res.data.pagination;
+      if (pag) {
+        setTotal(pag.total || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch articles:', err);
+    } finally {
+      setLoadingArticles(false);
+    }
+  };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSubjects();
   }, []);
 
@@ -98,28 +118,10 @@ const KnowledgePage = () => {
     }
   }, [location.state, subjects]);
 
-  // Fetch articles under selected topic
-  const fetchArticles = async (topicId, activePage = page) => {
-    if (!topicId) return;
-    setLoadingArticles(true);
-    try {
-      const res = await client.get(`/knowledge/articles?topic_id=${topicId}&page=${activePage}&limit=${limit}`);
-      setArticles(res.data.data || []);
-      const pag = res.data.pagination;
-      if (pag) {
-        setTotal(pag.total || 0);
-      }
-    } catch (err) {
-      console.error('Failed to fetch articles:', err);
-    } finally {
-      setLoadingArticles(false);
-    }
-  };
-
   // Toggle subject expansion and lazy-load topics
   const handleSubjectToggle = async (e, subject) => {
     // Prevent event bubbling if clicking nested buttons
-    if (e.target.closest('.btn-add-topic')) return;
+    if (e.target.closest('.btn-add-topic') || e.target.closest('.btn-edit-subject') || e.target.closest('.btn-delete-subject')) return;
 
     const subId = subject.id;
     const isExpanded = !expandedSubjects[subId];
@@ -140,6 +142,61 @@ const KnowledgePage = () => {
     setSelectedTopic(topic);
     setPage(1);
     fetchArticles(topic.id, 1);
+  };
+
+  const handleDeleteSubject = async (subject) => {
+    const confirmMessage = t('knowledge.deleteSubjectConfirm', { name: subject.name });
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      await client.delete(`/knowledge/subjects/${subject.id}`);
+      alert(t('knowledge.deleteSubjectSuccess'));
+      
+      setSubjects(prev => prev.filter(s => s.id !== subject.id));
+      
+      if (selectedSubject?.id === subject.id) {
+        setSelectedSubject(null);
+        setSelectedTopic(null);
+        setArticles([]);
+        setTotal(0);
+      }
+    } catch (err) {
+      console.error('Failed to delete subject:', err);
+      const errorText = err.response?.status === 403
+        ? t('knowledge.errorForbiddenAction')
+        : (err.response?.data?.error?.message || t('knowledge.errorGeneral'));
+      alert(t('knowledge.deleteSubjectError', { error: errorText }));
+    }
+  };
+
+  const handleDeleteTopic = async (subject, topic) => {
+    const confirmMessage = t('knowledge.deleteTopicConfirm', { name: topic.name });
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      await client.delete(`/knowledge/topics/${topic.id}`);
+      alert(t('knowledge.topicDeletedSuccess'));
+      
+      setSubjectTopics(prev => {
+        const updatedTopics = (prev[subject.id] || []).filter(t => t.id !== topic.id);
+        return {
+          ...prev,
+          [subject.id]: updatedTopics
+        };
+      });
+      
+      if (selectedTopic?.id === topic.id) {
+        setSelectedTopic(null);
+        setArticles([]);
+        setTotal(0);
+      }
+    } catch (err) {
+      console.error('Failed to delete topic:', err);
+      const errorText = err.response?.status === 403
+        ? t('knowledge.errorForbiddenAction')
+        : (err.response?.data?.error?.message || t('knowledge.errorGeneral'));
+      alert(t('knowledge.deleteTopicError', { error: errorText }));
+    }
   };
 
   // Callback after successful topic creation
@@ -170,6 +227,7 @@ const KnowledgePage = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  setSubjectToEdit(null);
                   setSubjectModalOpen(true);
                 }}
                 title="Add Subject"
@@ -201,19 +259,45 @@ const KnowledgePage = () => {
                           {sub.name}
                         </span>
                       </div>
-                      {isTeacherOrAdmin && isExpanded && (
+                      {isTeacherOrAdmin && (
                         <div className="subject-actions">
+                          {isExpanded && (
+                            <button 
+                              className="btn-add-topic"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setTopicToEdit(null);
+                                setActiveSubjectForTopicAdd(sub.id);
+                                setTopicModalOpen(true);
+                              }}
+                              title="Add Topic"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          )}
                           <button 
-                            className="btn-add-topic"
+                            className="btn-edit-subject"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setActiveSubjectForTopicAdd(sub.id);
-                              setTopicModalOpen(true);
+                              setSubjectToEdit(sub);
+                              setSubjectModalOpen(true);
                             }}
-                            title="Add Topic"
+                            title="Edit Subject"
                           >
-                            <Plus size={12} />
+                            <Pencil size={12} />
+                          </button>
+                          <button 
+                            className="btn-delete-subject"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteSubject(sub);
+                            }}
+                            title="Delete Subject"
+                          >
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       )}
@@ -228,13 +312,42 @@ const KnowledgePage = () => {
                           </span>
                         ) : (
                           topicsList.map((topic) => (
-                            <button
-                              key={topic.id}
-                              className={`topic-btn ${selectedTopic?.id === topic.id ? 'active' : ''}`}
-                              onClick={() => handleTopicSelect(sub, topic)}
-                            >
-                              {topic.name}
-                            </button>
+                            <div key={topic.id} className="topic-item-row">
+                              <button
+                                className={`topic-btn ${selectedTopic?.id === topic.id ? 'active' : ''}`}
+                                onClick={() => handleTopicSelect(sub, topic)}
+                              >
+                                {topic.name}
+                              </button>
+                              {isTeacherOrAdmin && (
+                                <div className="topic-actions">
+                                  <button 
+                                    className="btn-edit-topic"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setTopicToEdit(topic);
+                                      setActiveSubjectForTopicAdd(sub.id);
+                                      setTopicModalOpen(true);
+                                    }}
+                                    title="Edit Topic"
+                                  >
+                                    <Pencil size={10} />
+                                  </button>
+                                  <button 
+                                    className="btn-delete-topic"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleDeleteTopic(sub, topic);
+                                    }}
+                                    title="Delete Topic"
+                                  >
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           ))
                         )}
                       </div>
@@ -369,15 +482,23 @@ const KnowledgePage = () => {
       {/* Form Modals */}
       <SubjectFormModal 
         isOpen={subjectModalOpen}
-        onClose={() => setSubjectModalOpen(false)}
+        onClose={() => {
+          setSubjectModalOpen(false);
+          setSubjectToEdit(null);
+        }}
         onSuccess={fetchSubjects}
+        subjectToEdit={subjectToEdit}
       />
 
       <TopicFormModal 
         isOpen={topicModalOpen}
-        onClose={() => setTopicModalOpen(false)}
+        onClose={() => {
+          setTopicModalOpen(false);
+          setTopicToEdit(null);
+        }}
         onSuccess={handleTopicCreateSuccess}
         subjectId={activeSubjectForTopicAdd}
+        topicToEdit={topicToEdit}
       />
 
       <ArticleFormModal 
