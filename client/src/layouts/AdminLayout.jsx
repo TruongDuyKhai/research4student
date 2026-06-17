@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { 
-  ShieldAlert, Users, GraduationCap, Key, FileText, 
+import {
+  ShieldAlert, Users, GraduationCap, Key, FileText, ClipboardList,
   LayoutDashboard, ArrowLeft, LogOut, Sun, Moon, Laptop,
   Menu
 } from 'lucide-react';
@@ -56,6 +56,11 @@ const AdminLayout = () => {
           <NavLink to="reports" className={({ isActive }) => `admin-menu-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
             <ShieldAlert size={18} />
             <span>Reports</span>
+          </NavLink>
+
+          <NavLink to="teacher-applications" className={({ isActive }) => `admin-menu-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+            <ClipboardList size={18} />
+            <span>Applications</span>
           </NavLink>
         </nav>
 

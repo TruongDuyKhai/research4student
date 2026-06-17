@@ -19,25 +19,25 @@ router.get('/', (req, res) => {
 
   try {
     const resources = resourcesDb.prepare(`
-      SELECT id, name AS title, short_description AS description, 'resource' AS type
+      SELECT id, name AS title, COALESCE(short_description, '') AS description, 'resource' AS type
       FROM research_websites
-      WHERE status = 'published' AND (name LIKE ? OR short_description LIKE ?)
+      WHERE status = 'published' AND (name LIKE ? OR COALESCE(short_description, '') LIKE ?)
       LIMIT ?
     `).all(like, like, limit);
 
     const guides = guidesDb.prepare(`
-      SELECT id, title, description, 'guide' AS type
+      SELECT id, title, COALESCE(description, '') AS description, 'guide' AS type
       FROM guides
-      WHERE status = 'published' AND (title LIKE ? OR description LIKE ?)
+      WHERE status = 'published' AND (title LIKE ? OR COALESCE(description, '') LIKE ?)
       LIMIT ?
     `).all(like, like, limit);
 
     const articles = knowledgeDb.prepare(`
       SELECT a.id, a.title, '' AS description, 'article' AS type
       FROM articles a
-      WHERE a.status = 'published' AND a.title LIKE ?
+      WHERE a.status = 'published' AND (a.title LIKE ? OR COALESCE(a.content, '') LIKE ?)
       LIMIT ?
-    `).all(like, limit);
+    `).all(like, like, limit);
 
     return res.status(200).json({
       data: { resources, guides, articles },

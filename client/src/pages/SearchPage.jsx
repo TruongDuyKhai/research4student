@@ -47,7 +47,10 @@ const SearchPage = () => {
         const res = await client.get(`/search?q=${encodeURIComponent(query)}&limit=8`);
         setResults(res.data.data);
       } catch (err) {
-        setError(t('search.error'));
+        const status = err?.response?.status;
+        const msg = err?.response?.data?.error?.message || err.message;
+        console.error(`Search API error [${status}]:`, msg);
+        setError(`${t('search.error')} (${status || 'network'}: ${msg})`);
       } finally {
         setLoading(false);
       }

@@ -3,9 +3,10 @@ import { useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeaturesContext';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, BookOpen, ChevronLeft } from 'lucide-react';
 import client from '../api/client';
 import EmailPasswordForm from '../components/EmailPasswordForm';
+import './AuthPage.css';
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -14,6 +15,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const googleButtonRef = useRef(null);
 
+  // 'pick' | 'student' | 'teacher'
+  const [mode, setMode] = useState('pick');
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,162 +25,195 @@ const LoginPage = () => {
       setErrorMsg('');
       const res = await client.post('/auth/google', { credential: response.credential });
       const { token, user, needsUsername } = res.data.data;
-
       login(token, user);
-
-      if (needsUsername) {
-        navigate('/set-username');
-      } else {
-        navigate('/');
-      }
+      navigate(needsUsername ? '/set-username' : '/');
     } catch (err) {
-      console.error('Google login backend error:', err);
-      const errMsg = err.response?.data?.error?.message || 'Failed to authenticate with Google. Please try again.';
+      const errMsg = err.response?.data?.error?.message || 'Failed to authenticate with Google.';
       setErrorMsg(errMsg);
     }
   };
 
-  const handleEmailLogin = async ({ email, password, turnstileToken }) => {
+  const handleStudentLogin = async ({ email, password }) => {
     setSubmitting(true);
     setErrorMsg('');
-
     try {
-      const res = await client.post('/auth/student/login', {
-        email,
-        password,
-        turnstileToken
-      });
-
+      const res = await client.post('/auth/student/login', { email, password });
       const { token, user, needsUsername } = res.data.data;
       login(token, user);
-
-      if (needsUsername) {
-        navigate('/set-username');
-      } else {
-        navigate('/');
-      }
+      navigate(needsUsername ? '/set-username' : '/');
     } catch (err) {
-      console.error('Email login error:', err);
       const code = err.response?.data?.error?.code;
-      let msg = '';
+      setErrorMsg(
+        code === 'INVALID_CREDENTIALS' ? t('auth.errorInvalidCredentials') :
+        code === 'ACCOUNT_BANNED' ? t('auth.errorBanned') :
+        err.response?.data?.error?.message || t('auth.errorGeneric')
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      switch (code) {
-        case 'INVALID_CREDENTIALS':
-          msg = 'Invalid email or password.';
-          break;
-        case 'ACCOUNT_BANNED':
-          msg = 'This account has been banned.';
-          break;
-        case 'RATE_LIMITED':
-          msg = 'Too many attempts, please wait a few minutes and try again.';
-          break;
-        case 'TURNSTILE_FAILED':
-        case 'TURNSTILE_REQUIRED':
-          msg = 'Verification failed, please try the checkbox again.';
-          break;
-        default:
-          msg = err.response?.data?.error?.message || 'Login failed, please try again.';
-          break;
-      }
-      setErrorMsg(msg);
+  const handleTeacherLogin = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const email = form.email.value;
+    const password = form.password.value;
+    setSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await client.post('/auth/teacher/login', { email, password });
+      const { token, user, mustChangePassword } = res.data.data;
+      login(token, user);
+      navigate(mustChangePassword ? '/teacher/change-password' : '/');
+    } catch (err) {
+      setErrorMsg(err.response?.data?.error?.message || t('auth.errorInvalidCredentials'));
     } finally {
       setSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (!features.googleAuth || !import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-      return;
-    }
+    if (mode !== 'student') return;
+    if (!features.googleAuth || !import.meta.env.VITE_GOOGLE_CLIENT_ID) return;
 
-    const initializeGoogleSignIn = () => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        console.warn('VITE_GOOGLE_CLIENT_ID is not configured in client environment.');
-      }
-
-      if (window.google && window.google.accounts) {
+    const init = () => {
+      if (window.google?.accounts) {
         window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleCredentialResponse
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
         });
-        window.google.accounts.id.renderButton(
-          googleButtonRef.current,
-          { theme: 'outline', size: 'large', text: 'signin_with' }
-        );
+        if (googleButtonRef.current) {
+          window.google.accounts.id.renderButton(googleButtonRef.current, {
+            theme: 'outline', size: 'large', text: 'signin_with',
+          });
+        }
       } else {
-        // script is not ready, retry in 100ms
-        setTimeout(initializeGoogleSignIn, 100);
+        setTimeout(init, 100);
       }
     };
+    init();
+  }, [mode, features.googleAuth]);
 
-    initializeGoogleSignIn();
-  }, [features.googleAuth]);
+  const handleModeChange = (next) => {
+    setErrorMsg('');
+    setMode(next);
+  };
 
-  return (
-    <>
-      <div className="auth-header">
-        <GraduationCap className="auth-logo" />
-        <h2 className="auth-title">Research 4 Student</h2>
-        <p className="auth-subtitle">Welcome! Please sign in with your student Google account</p>
-      </div>
+  // ── Role Picker ──────────────────────────────────────────────
+  if (mode === 'pick') {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-header">
+            <GraduationCap className="auth-logo" />
+            <h2 className="auth-title">Research 4 Student</h2>
+            <p className="auth-subtitle">{t('auth.loginSelectRole')}</p>
+          </div>
 
-      {errorMsg && (
-        <div style={{ color: 'var(--color-danger)', fontSize: '0.875rem', textAlign: 'center', margin: '8px 0', fontWeight: '600' }}>
-          {errorMsg}
+          <div className="role-picker">
+            <button className="role-card" onClick={() => handleModeChange('student')}>
+              <BookOpen size={32} className="role-card-icon" />
+              <span className="role-card-label">{t('auth.roleStudent')}</span>
+              <span className="role-card-desc">{t('auth.roleStudentDesc')}</span>
+            </button>
+            <button className="role-card" onClick={() => handleModeChange('teacher')}>
+              <GraduationCap size={32} className="role-card-icon" />
+              <span className="role-card-label">{t('auth.roleTeacher')}</span>
+              <span className="role-card-desc">{t('auth.roleTeacherDesc')}</span>
+            </button>
+          </div>
+
+          <p className="auth-footer-link">
+            {t('auth.noAccountShort')}{' '}
+            <NavLink to="/register">{t('auth.registerBtn')}</NavLink>
+          </p>
         </div>
-      )}
-
-      {/* Google Sign-In & Divider (conditionally rendered) */}
-      {features.googleAuth && import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-        <>
-          {/* Google Sign-In Container */}
-          <div 
-            style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              marginTop: '16px', 
-              marginBottom: '8px' 
-            }}
-          >
-            <div ref={googleButtonRef}></div>
-          </div>
-
-          {/* Text Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0 16px', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-            <div style={{ flexGrow: 1, height: '1px', backgroundColor: 'var(--color-border)' }}></div>
-            <span style={{ padding: '0 12px', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>{t('auth.orDivider')}</span>
-            <div style={{ flexGrow: 1, height: '1px', backgroundColor: 'var(--color-border)' }}></div>
-          </div>
-        </>
-      ) : null}
-
-      {/* Email + Password Form */}
-      <EmailPasswordForm 
-        mode="login" 
-        submitLabel={t('auth.loginWithEmail')} 
-        onSubmit={handleEmailLogin} 
-        submitting={submitting} 
-      />
-
-      <div 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '12px', 
-          textAlign: 'center', 
-          marginTop: '24px' 
-        }}
-      >
-        <NavLink to="/register" className="login-link" style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-          {t('auth.noAccount')}
-        </NavLink>
-
-        <NavLink to="/teacher-login" className="login-link">
-          Are you a teacher? Login here
-        </NavLink>
       </div>
-    </>
+    );
+  }
+
+  // ── Student Login ────────────────────────────────────────────
+  if (mode === 'student') {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <button className="auth-back-btn" onClick={() => handleModeChange('pick')}>
+            <ChevronLeft size={16} /> {t('auth.back')}
+          </button>
+
+          <div className="auth-header">
+            <BookOpen className="auth-logo" />
+            <h2 className="auth-title">{t('auth.studentLoginTitle')}</h2>
+            <p className="auth-subtitle">{t('auth.studentLoginSubtitle')}</p>
+          </div>
+
+          {errorMsg && <div className="auth-error">{errorMsg}</div>}
+
+          {features.googleAuth && import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div ref={googleButtonRef} />
+              </div>
+              <div className="auth-divider">
+                <span>{t('auth.orDivider')}</span>
+              </div>
+            </>
+          )}
+
+          <EmailPasswordForm
+            mode="login"
+            submitLabel={t('auth.loginWithEmail')}
+            onSubmit={handleStudentLogin}
+            submitting={submitting}
+          />
+
+          <p className="auth-footer-link">
+            {t('auth.noAccountShort')}{' '}
+            <NavLink to="/register">{t('auth.registerBtn')}</NavLink>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Teacher Login ────────────────────────────────────────────
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <button className="auth-back-btn" onClick={() => handleModeChange('pick')}>
+          <ChevronLeft size={16} /> {t('auth.back')}
+        </button>
+
+        <div className="auth-header">
+          <GraduationCap className="auth-logo" />
+          <h2 className="auth-title">{t('auth.teacherLoginTitle')}</h2>
+          <p className="auth-subtitle">{t('auth.teacherLoginSubtitle')}</p>
+        </div>
+
+        {errorMsg && <div className="auth-error">{errorMsg}</div>}
+
+        <form onSubmit={handleTeacherLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-group">
+            <label className="form-label">{t('auth.email')}</label>
+            <input name="email" type="email" className="form-input"
+              placeholder="teacher@fpt.edu.vn" required disabled={submitting} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('auth.password')}</label>
+            <input name="password" type="password" className="form-input"
+              placeholder="••••••••" required disabled={submitting} />
+          </div>
+          <button type="submit" className="submit-btn" disabled={submitting}>
+            {submitting ? t('auth.signingIn') : t('auth.loginBtn')}
+          </button>
+        </form>
+
+        <p className="auth-footer-link">
+          {t('auth.noAccountShort')}{' '}
+          <NavLink to="/register">{t('auth.registerBtn')}</NavLink>
+        </p>
+      </div>
+    </div>
   );
 };
 

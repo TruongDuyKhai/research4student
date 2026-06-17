@@ -463,6 +463,68 @@ router.post(
 );
 
 /**
+ * POST /api/auth/teacher/apply
+ * Teacher self-registration — creates a pending application for admin review
+ */
+router.post('/teacher/apply', authLimiter, async (req, res) => {
+    const { email, password, display_name, employee_code, department } = req.body;
+
+    if (!email || !password || !display_name || !employee_code || !department) {
+        return res.status(400).json({
+            error: { code: 'BAD_REQUEST', message: 'email, password, display_name, employee_code and department are required' }
+        });
+    }
+
+    if (password.length < 8) {
+        return res.status(400).json({
+            error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters long' }
+        });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({
+            error: { code: 'INVALID_EMAIL_FORMAT', message: 'Invalid email format' }
+        });
+    }
+
+    try {
+        // Check if email already exists in users or pending applications
+        const existingUser = usersModel.findByEmail(email);
+        if (existingUser) {
+            return res.status(409).json({
+                error: { code: 'EMAIL_ALREADY_EXISTS', message: 'An account with this email already exists.' }
+            });
+        }
+
+        const { usersDb } = require('../db/connections');
+        const existingApp = usersDb.prepare('SELECT id FROM teacher_applications WHERE email = ?').get(email);
+        if (existingApp) {
+            return res.status(409).json({
+                error: { code: 'APPLICATION_ALREADY_EXISTS', message: 'An application with this email is already pending review.' }
+            });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        usersDb.prepare(`
+            INSERT INTO teacher_applications (email, display_name, employee_code, department, password_hash)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(email.trim().toLowerCase(), display_name.trim(), employee_code.trim(), department.trim(), hash);
+
+        return res.status(201).json({
+            data: { message: 'Application submitted. You will be notified once an admin reviews your request.' }
+        });
+    } catch (error) {
+        console.error('Failed to submit teacher application:', error.message);
+        return res.status(500).json({
+            error: { code: 'SERVER_ERROR', message: 'An error occurred while submitting the application' }
+        });
+    }
+});
+
+/**
  * GET /api/auth/me
  * Retrieve profile information for current session user
  */

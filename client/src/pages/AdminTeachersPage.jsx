@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Key, ShieldAlert, X, Copy, Check } from 'lucide-react';
+import { Plus, Search, Key, ShieldAlert, Trash2, X, Copy, Check } from 'lucide-react';
 import client from '../api/client';
 
 const AdminTeachersPage = () => {
@@ -106,6 +106,21 @@ const AdminTeachersPage = () => {
     }
   };
 
+  const handleDeleteTeacher = async (teacherId, teacherName) => {
+    const confirmed = window.confirm(
+      `⚠️ PERMANENT DELETE\n\nThis will permanently delete the teacher account "${teacherName}" and all their data.\n\nThis action CANNOT be undone. Click OK to proceed.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await client.delete(`/admin/teachers/${teacherId}/account`);
+      fetchTeachers();
+    } catch (err) {
+      console.error('Failed to delete teacher account:', err);
+      alert(err.response?.data?.error?.message || 'Failed to delete teacher account.');
+    }
+  };
+
   // Ban teacher
   const handleBanTeacher = async (teacherId, teacherName) => {
     if (!window.confirm(`Are you sure you want to BAN teacher "${teacherName}"?`)) return;
@@ -199,7 +214,7 @@ const AdminTeachersPage = () => {
                       <td className="admin-td" style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         {t.status === 'active' && (
                           <>
-                            <button 
+                            <button
                               className="btn-table-action-reset"
                               onClick={() => handleResetPassword(t.id, t.display_name)}
                               title="Reset Password"
@@ -207,7 +222,7 @@ const AdminTeachersPage = () => {
                               <Key size={12} />
                               <span>Reset</span>
                             </button>
-                            <button 
+                            <button
                               className="btn-table-action-delete"
                               onClick={() => handleBanTeacher(t.id, t.display_name)}
                               title="Ban Teacher"
@@ -217,6 +232,15 @@ const AdminTeachersPage = () => {
                             </button>
                           </>
                         )}
+                        <button
+                          className="btn-table-action-delete"
+                          style={{ backgroundColor: '#7f1d1d', borderColor: '#991b1b', color: 'white' }}
+                          onClick={() => handleDeleteTeacher(t.id, t.display_name)}
+                          title="Permanently Delete Account"
+                        >
+                          <Trash2 size={12} />
+                          <span>Delete</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

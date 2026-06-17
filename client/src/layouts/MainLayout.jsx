@@ -215,14 +215,11 @@ const MainLayout = () => {
             ) : (
               /* Unauthenticated Actions */
               <div className="auth-actions">
-                <button 
-                  className="btn-primary" 
-                  onClick={() => window.location.href = '/login'}
-                >
-                  {t('auth.loginWithGoogle')}
-                </button>
-                <NavLink to="/teacher-login" className="login-link">
-                  {t('auth.teacherLogin')}
+                <NavLink to="/login" className="btn-primary">
+                  {t('auth.loginBtn')}
+                </NavLink>
+                <NavLink to="/register" className="btn-register">
+                  {t('auth.registerBtn')}
                 </NavLink>
               </div>
             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Search, ShieldAlert, ShieldCheck, Trash2 } from 'lucide-react';
 import client from '../api/client';
 
 const AdminUsersPage = () => {
@@ -31,6 +31,21 @@ const AdminUsersPage = () => {
     e.preventDefault();
     setPage(1);
     fetchUsers(1);
+  };
+
+  const handleDeleteUser = async (userId, username) => {
+    const confirmed = window.confirm(
+      `⚠️ PERMANENT DELETE\n\nThis will permanently delete the account "@${username}" and all their data.\n\nThis action CANNOT be undone. Type the username to confirm:\n\n(Click OK to proceed)`
+    );
+    if (!confirmed) return;
+
+    try {
+      await client.delete(`/admin/users/${userId}`);
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to delete student:', err);
+      alert(err.response?.data?.error?.message || 'Failed to delete student account.');
+    }
   };
 
   // Toggle user status (active / banned)
@@ -112,9 +127,9 @@ const AdminUsersPage = () => {
                             {u.status}
                           </span>
                         </td>
-                        <td className="admin-td" style={{ textAlign: 'right' }}>
+                        <td className="admin-td" style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                           {u.status === 'active' ? (
-                            <button 
+                            <button
                               className="btn-table-action-delete"
                               onClick={() => handleToggleStatus(u.id, u.username, u.status)}
                               title="Ban Student"
@@ -123,7 +138,7 @@ const AdminUsersPage = () => {
                               <span>Ban</span>
                             </button>
                           ) : (
-                            <button 
+                            <button
                               className="btn-table-action-edit"
                               style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)', backgroundColor: 'transparent' }}
                               onClick={() => handleToggleStatus(u.id, u.username, u.status)}
@@ -133,6 +148,15 @@ const AdminUsersPage = () => {
                               <span>Unban</span>
                             </button>
                           )}
+                          <button
+                            className="btn-table-action-delete"
+                            style={{ backgroundColor: '#7f1d1d', borderColor: '#991b1b', color: 'white' }}
+                            onClick={() => handleDeleteUser(u.id, u.username)}
+                            title="Permanently Delete Account"
+                          >
+                            <Trash2 size={12} />
+                            <span>Delete</span>
+                          </button>
                         </td>
                       </tr>
                     );

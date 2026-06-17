@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { usersDb, moderationDb, communityDb, filesDb } = require('../db/connections');
+const { usersDb, moderationDb, communityDb, filesDb, knowledgeDb } = require('../db/connections');
 const { requireAuth, requireRole } = require('../middleware');
 const usersModel = require('../models/usersModel');
 
@@ -34,6 +34,37 @@ function getReporterInfo(reporterId) {
     display_name: user.display_name,
     avatar_url: avatarUrl
   };
+}
+
+/**
+ * Permanently remove a user and clean up their community presence.
+ * - Soft-deletes authored posts/comments (preserves thread structure)
+ * - Hard-deletes reactions, project memberships, and invites
+ * - Hard-deletes the user row (cascades to teacher_profiles)
+ */
+function purgeUserData(userId) {
+  communityDb.prepare("UPDATE posts SET status = 'deleted', author_id = 0 WHERE author_id = ? AND project_id IS NULL").run(userId);
+  communityDb.prepare("UPDATE comments SET status = 'deleted', author_id = 0 WHERE author_id = ?").run(userId);
+  communityDb.prepare("DELETE FROM reactions WHERE user_id = ?").run(userId);
+
+  // Transfer project ownership to first remaining member before removing, or archive if solo
+  const ownedProjects = communityDb.prepare("SELECT id FROM projects WHERE owner_id = ?").all(userId);
+  for (const proj of ownedProjects) {
+    const nextMember = communityDb.prepare(
+      "SELECT user_id FROM project_members WHERE project_id = ? AND user_id != ? LIMIT 1"
+    ).get(proj.id, userId);
+    if (nextMember) {
+      communityDb.prepare("UPDATE projects SET owner_id = ? WHERE id = ?").run(nextMember.user_id, proj.id);
+      communityDb.prepare("UPDATE project_members SET role = 'owner' WHERE project_id = ? AND user_id = ?").run(proj.id, nextMember.user_id);
+    } else {
+      communityDb.prepare("UPDATE projects SET status = 'archived' WHERE id = ?").run(proj.id);
+    }
+  }
+
+  communityDb.prepare("DELETE FROM project_members WHERE user_id = ?").run(userId);
+  communityDb.prepare("DELETE FROM project_invites WHERE invited_user_id = ? OR invited_by = ?").run(userId, userId);
+
+  usersDb.prepare("DELETE FROM users WHERE id = ?").run(userId);
 }
 
 // Apply admin protection to all routes in this router
@@ -342,6 +373,28 @@ router.delete('/teachers/:id', (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/admin/teachers/:id/account
+ * Permanently delete a teacher account and all associated data
+ */
+router.delete('/teachers/:id/account', (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const teacher = usersDb.prepare("SELECT * FROM users WHERE id = ? AND role = 'teacher'").get(id);
+    if (!teacher) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } });
+    }
+
+    purgeUserData(parseInt(id, 10));
+
+    return res.status(200).json({ data: { message: 'Teacher account permanently deleted' } });
+  } catch (error) {
+    console.error('Failed to delete teacher account:', error.message);
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'An error occurred while deleting the teacher account' } });
+  }
+});
+
 /* ==========================================
    USER MANAGEMENT
    ========================================== */
@@ -445,6 +498,143 @@ router.patch('/users/:id/status', (req, res) => {
         message: 'An error occurred while updating user status'
       }
     });
+  }
+});
+
+/**
+ * DELETE /api/admin/users/:id
+ * Permanently delete a student account and all associated data
+ */
+router.delete('/users/:id', (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = usersDb.prepare("SELECT * FROM users WHERE id = ? AND role = 'student'").get(id);
+    if (!user) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Student not found' } });
+    }
+
+    purgeUserData(parseInt(id, 10));
+
+    return res.status(200).json({ data: { message: 'Student account permanently deleted' } });
+  } catch (error) {
+    console.error('Failed to delete student account:', error.message);
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'An error occurred while deleting the student account' } });
+  }
+});
+
+/* ==========================================
+   TEACHER APPLICATIONS (SELF-REGISTRATION)
+   ========================================== */
+
+/**
+ * GET /api/admin/teacher-applications
+ * List teacher applications with optional status filter
+ */
+router.get('/teacher-applications', (req, res) => {
+  const status = req.query.status || 'pending';
+  const page = parseInt(req.query.page || '1', 10);
+  const limit = parseInt(req.query.limit || '20', 10);
+  const offset = (page - 1) * limit;
+
+  try {
+    const total = usersDb.prepare(
+      'SELECT COUNT(*) AS total FROM teacher_applications WHERE status = ?'
+    ).get(status).total;
+
+    const apps = usersDb.prepare(`
+      SELECT id, email, display_name, employee_code, department, status, reject_reason, created_at, reviewed_at
+      FROM teacher_applications
+      WHERE status = ?
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `).all(status, limit, offset);
+
+    return res.status(200).json({ data: apps, pagination: { page, limit, total } });
+  } catch (error) {
+    console.error('Failed to list teacher applications:', error.message);
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to list applications' } });
+  }
+});
+
+/**
+ * POST /api/admin/teacher-applications/:id/approve
+ * Approve a teacher application — creates the teacher user account
+ */
+router.post('/teacher-applications/:id/approve', (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const app = usersDb.prepare('SELECT * FROM teacher_applications WHERE id = ? AND status = ?').get(id, 'pending');
+    if (!app) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Pending application not found' } });
+    }
+
+    // Check for email/employee_code conflicts before creating
+    const existingUser = usersDb.prepare('SELECT id FROM users WHERE email = ?').get(app.email);
+    if (existingUser) {
+      usersDb.prepare("UPDATE teacher_applications SET status = 'rejected', reject_reason = 'Email already taken by another account', reviewed_at = datetime('now') WHERE id = ?").run(id);
+      return res.status(409).json({ error: { code: 'EMAIL_CONFLICT', message: 'Email is already taken by another account. Application has been rejected.' } });
+    }
+
+    const existingCode = usersDb.prepare('SELECT user_id FROM teacher_profiles WHERE employee_code = ?').get(app.employee_code);
+    if (existingCode) {
+      return res.status(409).json({ error: { code: 'CODE_CONFLICT', message: 'Employee code already exists. Please update the application before approving.' } });
+    }
+
+    // Create teacher account using transaction
+    const createTeacher = usersDb.transaction(() => {
+      const userResult = usersDb.prepare(`
+        INSERT INTO users (role, email, password_hash, username, display_name, status)
+        VALUES ('teacher', ?, ?, ?, ?, 'active')
+      `).run(app.email, app.password_hash, app.employee_code, app.display_name);
+
+      const userId = userResult.lastInsertRowid;
+
+      usersDb.prepare(`
+        INSERT INTO teacher_profiles (user_id, employee_code, department)
+        VALUES (?, ?, ?)
+      `).run(userId, app.employee_code, app.department);
+
+      usersDb.prepare(`
+        UPDATE teacher_applications SET status = 'approved', reviewed_at = datetime('now') WHERE id = ?
+      `).run(id);
+
+      return userId;
+    });
+
+    const newUserId = createTeacher();
+    const newUser = usersDb.prepare('SELECT id, email, display_name, username, role, status FROM users WHERE id = ?').get(newUserId);
+
+    return res.status(200).json({ data: { message: 'Application approved. Teacher account created.', user: newUser } });
+  } catch (error) {
+    console.error('Failed to approve teacher application:', error.message);
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to approve application' } });
+  }
+});
+
+/**
+ * POST /api/admin/teacher-applications/:id/reject
+ * Reject a teacher application with optional reason
+ */
+router.post('/teacher-applications/:id/reject', (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  try {
+    const app = usersDb.prepare('SELECT * FROM teacher_applications WHERE id = ? AND status = ?').get(id, 'pending');
+    if (!app) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Pending application not found' } });
+    }
+
+    usersDb.prepare(`
+      UPDATE teacher_applications SET status = 'rejected', reject_reason = ?, reviewed_at = datetime('now') WHERE id = ?
+    `).run(reason || null, id);
+
+    return res.status(200).json({ data: { message: 'Application rejected.' } });
+  } catch (error) {
+    console.error('Failed to reject teacher application:', error.message);
+    return res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Failed to reject application' } });
   }
 });
 

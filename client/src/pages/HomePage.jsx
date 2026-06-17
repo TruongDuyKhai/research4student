@@ -27,8 +27,11 @@ const HomePage = () => {
 
   // Search bar state
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
+  const [searchResults, setSearchResults] = useState(null); // null = not searched yet, object = searched
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchFormRef = useRef(null);
   const searchDebounceRef = useRef(null);
 
   // Most searched terms from localStorage
@@ -40,6 +43,17 @@ const HomePage = () => {
       const sorted = [...stored].sort((a, b) => b.count - a.count).slice(0, 6);
       setTopSearches(sorted);
     } catch (_) {}
+  }, []);
+
+  // Close dropdown when clicking outside the search form
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchFormRef.current && !searchFormRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
   // Fetch Recommended Websites and Community Posts on load
@@ -78,16 +92,23 @@ const HomePage = () => {
 
     if (val.trim().length < 2) {
       setSearchResults(null);
+      setSearchError(false);
+      setDropdownOpen(false);
       return;
     }
 
+    setDropdownOpen(true);
+
     searchDebounceRef.current = setTimeout(async () => {
       setSearchLoading(true);
+      setSearchError(false);
       try {
-        const res = await client.get(`/search?q=${encodeURIComponent(val.trim())}&limit=4`);
+        const res = await client.get(`/search?q=${encodeURIComponent(val.trim())}&limit=5`);
         setSearchResults(res.data.data);
-      } catch (_) {
-        setSearchResults(null);
+      } catch (err) {
+        console.error('Search error:', err?.response?.data || err.message);
+        setSearchResults({ resources: [], guides: [], articles: [] });
+        setSearchError(true);
       } finally {
         setSearchLoading(false);
       }
@@ -98,6 +119,7 @@ const HomePage = () => {
     e.preventDefault();
     const trimmed = searchQuery.trim();
     if (trimmed.length >= 2) {
+      setDropdownOpen(false);
       navigate(`/search?q=${encodeURIComponent(trimmed)}`);
     }
   };
@@ -117,7 +139,7 @@ const HomePage = () => {
             <h2 className="hero-title">Research 4 Student</h2>
             <p className="hero-subtitle">{t('home.heroSubtitle')}</p>
             {/* Global Search Bar */}
-            <form className="hero-search-form" onSubmit={handleSearchSubmit}>
+            <form className="hero-search-form" onSubmit={handleSearchSubmit} ref={searchFormRef}>
               <div className="hero-search-wrap">
                 <Search size={18} className="hero-search-icon" />
                 <input
@@ -125,48 +147,69 @@ const HomePage = () => {
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchInput}
+                  onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
                   placeholder={t('search.placeholder')}
+                  autoComplete="off"
                 />
                 <button type="submit" className="hero-search-btn">
                   {t('search.searchBtn')}
                 </button>
               </div>
 
-              {/* Inline dropdown results */}
-              {(searchLoading || (searchResults && (
-                (searchResults.resources?.length || 0) +
-                (searchResults.guides?.length || 0) +
-                (searchResults.articles?.length || 0) > 0
-              ))) && (
+              {/* Inline dropdown: hiện khi đang loading hoặc đã có kết quả tìm */}
+              {dropdownOpen && (searchLoading || searchResults !== null) && (
                 <div className="hero-search-dropdown">
                   {searchLoading ? (
                     <div className="search-drop-loading">{t('common.loading')}</div>
+                  ) : searchError ? (
+                    <div className="search-drop-loading" style={{ color: 'var(--color-danger, #dc2626)' }}>
+                      {t('search.error')}
+                    </div>
                   ) : (
                     <>
-                      {searchResults?.resources?.map(r => (
-                        <div key={`r-${r.id}`} className="search-drop-item" onClick={() => navigate(`/resources/${r.id}`)}>
-                          <Globe size={13} className="drop-icon" />
-                          <span>{r.title}</span>
-                          <span className="drop-tag">{t('nav.resources')}</span>
-                        </div>
-                      ))}
-                      {searchResults?.guides?.map(g => (
-                        <div key={`g-${g.id}`} className="search-drop-item" onClick={() => navigate(`/guides/${g.id}`)}>
-                          <FileText size={13} className="drop-icon" />
-                          <span>{g.title}</span>
-                          <span className="drop-tag">{t('nav.guides')}</span>
-                        </div>
-                      ))}
-                      {searchResults?.articles?.map(a => (
-                        <div key={`a-${a.id}`} className="search-drop-item" onClick={() => navigate(`/knowledge/articles/${a.id}`)}>
-                          <BookOpen size={13} className="drop-icon" />
-                          <span>{a.title}</span>
-                          <span className="drop-tag">{t('nav.knowledge')}</span>
-                        </div>
-                      ))}
+                      {(() => {
+                        const total = (searchResults?.resources?.length || 0) +
+                          (searchResults?.guides?.length || 0) +
+                          (searchResults?.articles?.length || 0);
+                        if (total === 0) {
+                          return (
+                            <div className="search-drop-loading" style={{ color: 'var(--color-text-secondary)' }}>
+                              {t('search.noResults', { q: searchQuery.trim() })}
+                            </div>
+                          );
+                        }
+                        return (
+                          <>
+                            {searchResults?.resources?.map(r => (
+                              <div key={`r-${r.id}`} className="search-drop-item"
+                                onMouseDown={() => { setDropdownOpen(false); navigate(`/resources/${r.id}`); }}>
+                                <Globe size={13} className="drop-icon" />
+                                <span>{r.title}</span>
+                                <span className="drop-tag">{t('nav.resources')}</span>
+                              </div>
+                            ))}
+                            {searchResults?.guides?.map(g => (
+                              <div key={`g-${g.id}`} className="search-drop-item"
+                                onMouseDown={() => { setDropdownOpen(false); navigate(`/guides/${g.id}`); }}>
+                                <FileText size={13} className="drop-icon" />
+                                <span>{g.title}</span>
+                                <span className="drop-tag">{t('nav.guides')}</span>
+                              </div>
+                            ))}
+                            {searchResults?.articles?.map(a => (
+                              <div key={`a-${a.id}`} className="search-drop-item"
+                                onMouseDown={() => { setDropdownOpen(false); navigate(`/knowledge/articles/${a.id}`); }}>
+                                <BookOpen size={13} className="drop-icon" />
+                                <span>{a.title}</span>
+                                <span className="drop-tag">{t('nav.knowledge')}</span>
+                              </div>
+                            ))}
+                          </>
+                        );
+                      })()}
                       <div
                         className="search-drop-viewall"
-                        onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)}
+                        onMouseDown={() => { setDropdownOpen(false); navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`); }}
                       >
                         {t('search.viewAllResults')}
                       </div>

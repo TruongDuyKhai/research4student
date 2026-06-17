@@ -25,13 +25,14 @@ import PublicProfilePage from './pages/PublicProfilePage';
 import SetUsernamePage from './pages/SetUsernamePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import TeacherLoginPage from './pages/TeacherLoginPage';
+// TeacherLoginPage removed — teacher login now unified in LoginPage
 import TeacherChangePasswordPage from './pages/TeacherChangePasswordPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 
 // Admin Subpages
 import AdminHomePage from './pages/AdminHomePage';
 import AdminTeachersPage from './pages/AdminTeachersPage';
+import AdminApplicationsPage from './pages/AdminApplicationsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminBanlistPage from './pages/AdminBanlistPage';
 import AdminReportsPage from './pages/AdminReportsPage';
@@ -132,21 +133,24 @@ function App() {
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="banned-keywords" element={<AdminBanlistPage />} />
             <Route path="reports" element={<AdminReportsPage />} />
+            <Route path="teacher-applications" element={<AdminApplicationsPage />} />
           </Route>
 
-          {/* Auth Layout containing simple centered login panels */}
+          {/* Standalone auth pages (self-contained layout) */}
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          {/* Legacy teacher-login redirect */}
+          <Route path="teacher-login" element={<Navigate to="/login" replace />} />
+
+          {/* Auth Layout for teacher password change */}
           <Route element={<AuthLayout />}>
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="teacher-login" element={<TeacherLoginPage />} />
-            
-            <Route 
-              path="teacher/change-password" 
+            <Route
+              path="teacher/change-password"
               element={
                 <ProtectedRoute roles={['teacher']}>
                   <TeacherChangePasswordPage />
                 </ProtectedRoute>
-              } 
+              }
             />
           </Route>
 
