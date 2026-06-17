@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  BookOpen, 
-  FileText, 
-  ThumbsUp, 
-  MessageSquare, 
-  Globe, 
-  Users, 
-  ArrowRight,
-  ExternalLink
+import {
+  BookOpen,
+  FileText,
+  ThumbsUp,
+  MessageSquare,
+  Globe,
+  Search,
+  TrendingUp
 } from 'lucide-react';
 import client from '../api/client';
 import Avatar from '../components/Avatar';
@@ -25,6 +24,23 @@ const HomePage = () => {
   const [posts, setPosts] = useState([]);
   const [loadingResources, setLoadingResources] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
+
+  // Search bar state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounceRef = useRef(null);
+
+  // Most searched terms from localStorage
+  const [topSearches, setTopSearches] = useState([]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('r4s_searches') || '[]');
+      const sorted = [...stored].sort((a, b) => b.count - a.count).slice(0, 6);
+      setTopSearches(sorted);
+    } catch (_) {}
+  }, []);
 
   // Fetch Recommended Websites and Community Posts on load
   useEffect(() => {
@@ -54,6 +70,42 @@ const HomePage = () => {
     fetchPosts();
   }, []);
 
+  const handleSearchInput = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    if (val.trim().length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await client.get(`/search?q=${encodeURIComponent(val.trim())}&limit=4`);
+        setSearchResults(res.data.data);
+      } catch (_) {
+        setSearchResults(null);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 350);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (trimmed.length >= 2) {
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+    }
+  };
+
+  const handleTopSearchClick = (term) => {
+    navigate(`/search?q=${encodeURIComponent(term)}`);
+  };
+
   return (
     <div className="home-container">
       <div className="home-grid">
@@ -64,15 +116,75 @@ const HomePage = () => {
           <section className="hero-banner">
             <h2 className="hero-title">Research 4 Student</h2>
             <p className="hero-subtitle">{t('home.heroSubtitle')}</p>
+            {/* Global Search Bar */}
+            <form className="hero-search-form" onSubmit={handleSearchSubmit}>
+              <div className="hero-search-wrap">
+                <Search size={18} className="hero-search-icon" />
+                <input
+                  className="hero-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={handleSearchInput}
+                  placeholder={t('search.placeholder')}
+                />
+                <button type="submit" className="hero-search-btn">
+                  {t('search.searchBtn')}
+                </button>
+              </div>
+
+              {/* Inline dropdown results */}
+              {(searchLoading || (searchResults && (
+                (searchResults.resources?.length || 0) +
+                (searchResults.guides?.length || 0) +
+                (searchResults.articles?.length || 0) > 0
+              ))) && (
+                <div className="hero-search-dropdown">
+                  {searchLoading ? (
+                    <div className="search-drop-loading">{t('common.loading')}</div>
+                  ) : (
+                    <>
+                      {searchResults?.resources?.map(r => (
+                        <div key={`r-${r.id}`} className="search-drop-item" onClick={() => navigate(`/resources/${r.id}`)}>
+                          <Globe size={13} className="drop-icon" />
+                          <span>{r.title}</span>
+                          <span className="drop-tag">{t('nav.resources')}</span>
+                        </div>
+                      ))}
+                      {searchResults?.guides?.map(g => (
+                        <div key={`g-${g.id}`} className="search-drop-item" onClick={() => navigate(`/guides/${g.id}`)}>
+                          <FileText size={13} className="drop-icon" />
+                          <span>{g.title}</span>
+                          <span className="drop-tag">{t('nav.guides')}</span>
+                        </div>
+                      ))}
+                      {searchResults?.articles?.map(a => (
+                        <div key={`a-${a.id}`} className="search-drop-item" onClick={() => navigate(`/knowledge/articles/${a.id}`)}>
+                          <BookOpen size={13} className="drop-icon" />
+                          <span>{a.title}</span>
+                          <span className="drop-tag">{t('nav.knowledge')}</span>
+                        </div>
+                      ))}
+                      <div
+                        className="search-drop-viewall"
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)}
+                      >
+                        {t('search.viewAllResults')}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </form>
+
             <div className="hero-cta">
-              <button 
-                className="btn-cta-primary" 
+              <button
+                className="btn-cta-primary"
                 onClick={() => navigate('/resources')}
               >
                 {t('home.exploreResources')}
               </button>
-              <button 
-                className="btn-cta-secondary" 
+              <button
+                className="btn-cta-secondary"
                 onClick={() => navigate('/community')}
               >
                 {t('home.joinCommunity')}
@@ -158,6 +270,30 @@ const HomePage = () => {
 
         {/* Sidebar Right Column (Hidden on <1024px) */}
         <aside className="home-sidebar">
+
+          {/* Most Searched Widget */}
+          {topSearches.length > 0 && (
+            <div className="widget-card">
+              <h3 className="widget-title">
+                <TrendingUp size={16} style={{ display: 'inline', marginRight: 6, color: 'var(--color-primary)' }} />
+                {t('search.mostSearched')}
+              </h3>
+              <div className="widget-divider"></div>
+              <div className="top-searches-list">
+                {topSearches.map((item, idx) => (
+                  <button
+                    key={item.term}
+                    className="top-search-item"
+                    onClick={() => handleTopSearchClick(item.term)}
+                  >
+                    <span className="top-search-rank">#{idx + 1}</span>
+                    <span className="top-search-term">{item.term}</span>
+                    <span className="top-search-count">{item.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Community Forum Posts Widget */}
           <div className="widget-card">

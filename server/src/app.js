@@ -11,6 +11,7 @@ const guidesRouter = require('./routes/guides');
 const projectsRouter = require('./routes/projects');
 const communityRouter = require('./routes/community');
 const adminRouter = require('./routes/admin');
+const searchRouter = require('./routes/search');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/guides', guidesRouter);
 app.use('/api/community/projects', projectsRouter);
 app.use('/api/community', communityRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/search', searchRouter);
 
 // API Health Check Route
 app.get('/api/health', (req, res) => {

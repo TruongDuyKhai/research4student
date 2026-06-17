@@ -20,6 +20,7 @@ import CommunityPage from './pages/CommunityPage';
 import PostDetailPage from './pages/PostDetailPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProfilePage from './pages/ProfilePage';
+import SearchPage from './pages/SearchPage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import SetUsernamePage from './pages/SetUsernamePage';
 import LoginPage from './pages/LoginPage';
@@ -73,6 +74,7 @@ function App() {
             <Route index element={<HomePage />} />
             
             {/* Public and Resource Directory Routes */}
+            <Route path="search" element={<SearchPage />} />
             <Route path="resources" element={<ResourcesPage />} />
             <Route path="resources/:id" element={<ResourceDetailPage />} />
             <Route path="knowledge" element={<KnowledgePage />} />

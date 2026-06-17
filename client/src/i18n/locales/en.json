@@ -355,6 +355,18 @@
     "errorSignInReport": "Please sign in to report content.",
     "reportSuccess": "Content reported successfully. Admin review is pending."
   },
+  "search": {
+    "placeholder": "Search resources, guides, articles...",
+    "searchBtn": "Search",
+    "title": "Search Results",
+    "back": "Back",
+    "hint": "Type at least 2 characters to search.",
+    "error": "Search failed. Please try again.",
+    "noResults": "No results found for \"{{q}}\".",
+    "foundResults": "{{count}} result(s) for \"{{q}}\"",
+    "viewAllResults": "View all results →",
+    "mostSearched": "Most Searched"
+  },
   "teacherLogin": {
     "title": "Teacher Portal",
     "subtitle": "Sign in with your email and password",

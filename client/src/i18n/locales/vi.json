@@ -355,6 +355,18 @@
     "errorSignInReport": "Vui lòng đăng nhập để báo cáo nội dung.",
     "reportSuccess": "Đã báo cáo nội dung thành công. Quản trị viên sẽ xem xét."
   },
+  "search": {
+    "placeholder": "Tìm kiếm tài nguyên, hướng dẫn, bài viết...",
+    "searchBtn": "Tìm kiếm",
+    "title": "Kết quả tìm kiếm",
+    "back": "Quay lại",
+    "hint": "Nhập ít nhất 2 ký tự để tìm kiếm.",
+    "error": "Tìm kiếm thất bại. Vui lòng thử lại.",
+    "noResults": "Không tìm thấy kết quả nào cho \"{{q}}\".",
+    "foundResults": "Tìm thấy {{count}} kết quả cho \"{{q}}\"",
+    "viewAllResults": "Xem tất cả kết quả →",
+    "mostSearched": "Tìm kiếm nhiều nhất"
+  },
   "teacherLogin": {
     "title": "Cổng Giáo Viên",
     "subtitle": "Đăng nhập bằng email và mật khẩu",
