@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Plus, MessageSquare, Users, Heart, Share2, Flag, Image as ImageIcon, 
-  X, AlertCircle, FileText, Check, CheckCircle, Trash2, ShieldAlert
+import {
+  Plus, MessageSquare, Users, Heart, Share2, Flag, Image as ImageIcon,
+  X, AlertCircle, FileText, Check, CheckCircle, Trash2, ShieldAlert,
+  Bold, Italic, Strikethrough, Heading2, Code, List, ListOrdered, Quote, Eye, EyeOff
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import client from '../api/client';
 import Turnstile from '../components/Turnstile';
 import ProjectFormModal from '../components/ProjectFormModal';
@@ -40,6 +42,8 @@ const CommunityPage = ({ defaultTab }) => {
   const [composerError, setComposerError] = useState('');
   const [cooldownCountdown, setCooldownCountdown] = useState(0);
   const [submittingPost, setSubmittingPost] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const textareaRef = useRef(null);
 
   // PROJECTS STATES
   const [projects, setProjects] = useState([]);
@@ -138,6 +142,33 @@ const CommunityPage = ({ defaultTab }) => {
 
   const handleRemoveTag = (indexToRemove) => {
     setPostTags(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const insertMarkdown = (type) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = postContent.substring(start, end);
+    let newText;
+    switch (type) {
+      case 'bold':      newText = `**${selected || 'in đậm'}**`; break;
+      case 'italic':    newText = `*${selected || 'in nghiêng'}*`; break;
+      case 'strike':    newText = `~~${selected || 'văn bản'}~~`; break;
+      case 'heading':   newText = `\n## ${selected || 'Tiêu đề'}`; break;
+      case 'code':      newText = selected.includes('\n') ? `\`\`\`\n${selected || 'code'}\n\`\`\`` : `\`${selected || 'code'}\``; break;
+      case 'ul':        newText = `\n- ${selected || 'Mục danh sách'}`; break;
+      case 'ol':        newText = `\n1. ${selected || 'Mục danh sách'}`; break;
+      case 'quote':     newText = `\n> ${selected || 'Trích dẫn'}`; break;
+      default: return;
+    }
+    const newContent = postContent.substring(0, start) + newText + postContent.substring(end);
+    setPostContent(newContent);
+    setTimeout(() => {
+      textarea.focus();
+      const cursorPos = start + newText.length;
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    }, 0);
   };
 
   // Immediate upload for post image attachment
@@ -380,15 +411,45 @@ const CommunityPage = ({ defaultTab }) => {
                   disabled={submittingPost}
                 />
                 
-                <textarea 
-                  className="composer-textarea-content"
-                  placeholder={t('community.forum.contentPlaceholder')}
-                  rows={4}
-                  value={postContent}
-                  onChange={(e) => setPostContent(e.target.value)}
-                  required
-                  disabled={submittingPost}
-                />
+                <div className="markdown-editor-wrapper">
+                  <div className="markdown-toolbar">
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('bold')} title="In đậm (Ctrl+B)"><Bold size={14} /></button>
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('italic')} title="In nghiêng (Ctrl+I)"><Italic size={14} /></button>
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('strike')} title="Gạch ngang"><Strikethrough size={14} /></button>
+                    <div className="md-toolbar-separator" />
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('heading')} title="Tiêu đề"><Heading2 size={14} /></button>
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('quote')} title="Trích dẫn"><Quote size={14} /></button>
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('code')} title="Code"><Code size={14} /></button>
+                    <div className="md-toolbar-separator" />
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('ul')} title="Danh sách không thứ tự"><List size={14} /></button>
+                    <button type="button" className="md-btn" onClick={() => insertMarkdown('ol')} title="Danh sách có thứ tự"><ListOrdered size={14} /></button>
+                    <div className="md-toolbar-spacer" />
+                    <button type="button" className={`md-btn md-btn-preview ${previewMode ? 'active' : ''}`} onClick={() => setPreviewMode(p => !p)} title={previewMode ? 'Chỉnh sửa' : 'Xem trước'}>
+                      {previewMode ? <EyeOff size={14} /> : <Eye size={14} />}
+                      <span>{previewMode ? 'Chỉnh sửa' : 'Xem trước'}</span>
+                    </button>
+                  </div>
+                  {previewMode ? (
+                    <div className="markdown-preview-pane">
+                      {postContent.trim() ? (
+                        <ReactMarkdown className="md-rendered">{postContent}</ReactMarkdown>
+                      ) : (
+                        <span className="markdown-preview-empty">Chưa có nội dung để xem trước...</span>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      ref={textareaRef}
+                      className="composer-textarea-content"
+                      placeholder={t('community.forum.contentPlaceholder')}
+                      rows={4}
+                      value={postContent}
+                      onChange={(e) => setPostContent(e.target.value)}
+                      required
+                      disabled={submittingPost}
+                    />
+                  )}
+                </div>
 
                 {/* Tags chips wrapper */}
                 <div className="composer-tags-container">
@@ -528,7 +589,7 @@ const CommunityPage = ({ defaultTab }) => {
                     {/* Post contents details */}
                     <div className="post-card-content">
                       {post.title && <h4 className="post-title-content">{post.title}</h4>}
-                      <p className="post-text-content">{post.content}</p>
+                      <ReactMarkdown className="post-text-content md-rendered">{post.content}</ReactMarkdown>
                       
                       {/* Image attachments if any */}
                       {post.attachment_url && (

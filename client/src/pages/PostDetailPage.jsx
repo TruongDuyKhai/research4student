@@ -7,6 +7,7 @@ import client from '../api/client';
 import Turnstile from '../components/Turnstile';
 import ReportModal from '../components/ReportModal';
 import Avatar from '../components/Avatar';
+import ReactMarkdown from 'react-markdown';
 import './PostDetailPage.css';
 
 // Recursive Comment Node Component
@@ -411,7 +412,7 @@ const PostDetailPage = () => {
         {/* Post Title & Content */}
         <div className="detailed-post-body">
           {post.title && <h3 className="detailed-post-title">{post.title}</h3>}
-          <p className="detailed-post-text">{post.content}</p>
+          <ReactMarkdown className="detailed-post-text md-rendered">{post.content}</ReactMarkdown>
 
           {/* Attachment render */}
           {post.attachment_url && (
