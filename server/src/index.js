@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 const app = require('./app');
 const { client } = require('./services/discordClient');
 const { startRefresher } = require('./services/cdnRefresher');
