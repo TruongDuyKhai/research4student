@@ -10,24 +10,25 @@ const customHandler = (req, res) => {
 };
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5000,
   handler: customHandler,
   standardHeaders: true,
   legacyHeaders: false
 });
 
 const writeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 60,
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 1000,
   handler: customHandler,
   standardHeaders: true,
   legacyHeaders: false
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 200,
+  skipSuccessfulRequests: true,
   handler: customHandler,
   standardHeaders: true,
   legacyHeaders: false
