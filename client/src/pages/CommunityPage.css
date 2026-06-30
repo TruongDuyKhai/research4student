@@ -467,6 +467,25 @@
   color: var(--color-warning);
 }
 
+.action-btn-delete {
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.action-btn-delete:hover {
+  background-color: var(--color-surface-alt);
+  color: var(--color-danger, #e53e3e);
+}
+
 /* Empty states */
 .forum-empty-state, .projects-empty-state {
   background-color: var(--color-surface);

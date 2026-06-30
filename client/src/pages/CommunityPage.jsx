@@ -297,6 +297,18 @@ const CommunityPage = ({ defaultTab }) => {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa bài viết này?')) return;
+    try {
+      await client.delete(`/community/posts/${postId}`);
+      setPostsPage(1);
+      fetchPosts(1);
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      alert('Xóa bài viết thất bại, vui lòng thử lại.');
+    }
+  };
+
   const triggerReport = (type, id) => {
     if (!user) {
       alert(t('community.forum.errorReportSignIn'));
@@ -610,7 +622,7 @@ const CommunityPage = ({ defaultTab }) => {
 
                     {/* Actions panel */}
                     <div className="post-card-actions">
-                      <button 
+                      <button
                         className={`action-btn-react ${post.liked ? 'liked' : ''}`}
                         onClick={() => handleToggleLike(post.id)}
                       >
@@ -618,7 +630,7 @@ const CommunityPage = ({ defaultTab }) => {
                         <span>{post.likesCount}</span>
                       </button>
 
-                      <button 
+                      <button
                         className="action-btn-comments"
                         onClick={() => navigate(`/community/posts/${post.id}`)}
                       >
@@ -626,13 +638,23 @@ const CommunityPage = ({ defaultTab }) => {
                         <span>{post.commentCount}</span>
                       </button>
 
-                      <button 
+                      <button
                         className="action-btn-report"
                         onClick={() => triggerReport('post', post.id)}
                         title="Report content"
                       >
                         <Flag size={14} />
                       </button>
+
+                      {user && (user.role === 'admin' || user.role === 'teacher' || post.author_id === user.id) && (
+                        <button
+                          className="action-btn-delete"
+                          onClick={() => handleDeletePost(post.id)}
+                          title="Xóa bài viết"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
 
                   </div>
