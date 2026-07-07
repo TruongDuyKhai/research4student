@@ -177,9 +177,9 @@ router.patch('/subjects/:id', requireAuth, requireRole(['admin', 'teacher']), (r
 
 /**
  * DELETE /api/knowledge/subjects/:id
- * Admin only: Delete subject (cascades)
+ * Admin/Teacher: Delete subject (cascades)
  */
-router.delete('/subjects/:id', requireAuth, requireRole('admin'), (req, res) => {
+router.delete('/subjects/:id', requireAuth, requireRole(['admin', 'teacher']), (req, res) => {
   const { id } = req.params;
 
   try {
@@ -379,9 +379,9 @@ router.patch('/topics/:id', requireAuth, requireRole(['admin', 'teacher']), (req
 
 /**
  * DELETE /api/knowledge/topics/:id
- * Admin only: Delete topic (cascades)
+ * Admin/Teacher: Delete topic (cascades)
  */
-router.delete('/topics/:id', requireAuth, requireRole('admin'), (req, res) => {
+router.delete('/topics/:id', requireAuth, requireRole(['admin', 'teacher']), (req, res) => {
   const { id } = req.params;
 
   try {
