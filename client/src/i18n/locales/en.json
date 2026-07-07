@@ -403,7 +403,9 @@
     "noResults": "No results found for \"{{q}}\".",
     "foundResults": "{{count}} result(s) for \"{{q}}\"",
     "viewAllResults": "View all results →",
-    "mostSearched": "Most Searched"
+    "mostSearched": "Most Searched",
+    "trending": "Trending searches",
+    "trendingEmpty": "No trending data yet."
   },
   "teacherLogin": {
     "title": "Teacher Portal",

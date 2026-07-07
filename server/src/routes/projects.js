@@ -507,7 +507,11 @@ router.delete("/:id", requireAuth, (req, res) => {
             });
         }
 
-        if (project.owner_id !== req.user.id && req.user.role !== "admin") {
+        if (
+            project.owner_id !== req.user.id &&
+            req.user.role !== "admin" &&
+            req.user.role !== "teacher"
+        ) {
             return res.status(403).json({
                 error: {
                     code: "FORBIDDEN",

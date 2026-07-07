@@ -398,6 +398,32 @@
   color: var(--color-warning);
 }
 
+.comment-btn-delete {
+  position: absolute;
+  right: 44px;
+  top: 12px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0;
+}
+
+.comment-card:hover .comment-btn-delete {
+  opacity: 1;
+}
+
+.comment-btn-delete:hover {
+  background-color: var(--color-surface-alt);
+  color: var(--color-danger, #e53e3e);
+}
+
 .comment-body-content {
   font-size: 0.925rem;
   color: var(--color-text);

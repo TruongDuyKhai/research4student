@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import './PostDetailPage.css';
 
 // Recursive Comment Node Component
-const CommentNode = ({ comment, postId, user, onReplySuccess, onReport }) => {
+const CommentNode = ({ comment, postId, user, onReplySuccess, onReport, onDeleteComment }) => {
   const { t } = useTranslation();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -84,6 +84,16 @@ const CommentNode = ({ comment, postId, user, onReplySuccess, onReport }) => {
           >
             <Flag size={12} />
           </button>
+
+          {user && (user.role === 'admin' || user.role === 'teacher' || comment.author_id === user.id) && comment.status !== 'deleted' && (
+            <button
+              className="comment-btn-delete"
+              onClick={() => onDeleteComment(comment.id)}
+              title="Xóa bình luận"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
 
         {/* Comment Body */}
@@ -172,6 +182,7 @@ const CommentNode = ({ comment, postId, user, onReplySuccess, onReport }) => {
               user={user}
               onReplySuccess={onReplySuccess}
               onReport={onReport}
+              onDeleteComment={onDeleteComment}
             />
           ))}
         </div>
@@ -442,9 +453,21 @@ const PostDetailPage = () => {
     );
   }
 
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa bình luận này?')) return;
+    try {
+      await client.delete(`/community/comments/${commentId}`);
+      fetchComments();
+      fetchPostDetail();
+    } catch (err) {
+      console.error('Failed to delete comment:', err);
+      alert('Xóa bình luận thất bại, vui lòng thử lại.');
+    }
+  };
+
   const author = post.author || { display_name: t('postDetail.comment.guestAuthor'), username: 'guest', avatar_url: null };
   const formattedPostDate = new Date(post.created_at.replace(' ', 'T') + 'Z').toLocaleString();
-  const isOwnerOrAdmin = user && (user.role === 'admin' || post.author_id === user.id);
+  const isOwnerOrAdmin = user && (user.role === 'admin' || user.role === 'teacher' || post.author_id === user.id);
 
   return (
     <div className="post-detail-page-container">
@@ -705,6 +728,7 @@ const PostDetailPage = () => {
                   fetchPostDetail();
                 }}
                 onReport={triggerReport}
+                onDeleteComment={handleDeleteComment}
               />
             ))}
           </div>

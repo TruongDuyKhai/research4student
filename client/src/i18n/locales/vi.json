@@ -403,7 +403,9 @@
     "noResults": "Không tìm thấy kết quả nào cho \"{{q}}\".",
     "foundResults": "Tìm thấy {{count}} kết quả cho \"{{q}}\"",
     "viewAllResults": "Xem tất cả kết quả →",
-    "mostSearched": "Tìm kiếm nhiều nhất"
+    "mostSearched": "Tìm kiếm nhiều nhất",
+    "trending": "Xu hướng tìm kiếm",
+    "trendingEmpty": "Chưa có dữ liệu xu hướng."
   },
   "teacherLogin": {
     "title": "Cổng Giáo Viên",

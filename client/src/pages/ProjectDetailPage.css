@@ -21,6 +21,26 @@
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
+.btn-delete-project {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-delete-project:hover {
+  border-color: var(--color-danger, #e53e3e);
+  color: var(--color-danger, #e53e3e);
+  background: color-mix(in srgb, #e53e3e 8%, transparent);
+}
+
 /* Post card action edit button */
 .action-btn-edit {
   display: flex;

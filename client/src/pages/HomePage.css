@@ -519,6 +519,25 @@
   z-index: 500;
 }
 
+.search-drop-section-label {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.drop-trending-rank {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 28px;
+}
+
 .search-drop-loading {
   padding: 14px 16px;
   color: var(--color-text-secondary);

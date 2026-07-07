@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, BookOpen, FileText, Globe, ArrowLeft } from 'lucide-react';
+import { Search, BookOpen, FileText, Globe, ArrowLeft, TrendingUp } from 'lucide-react';
 import client from '../api/client';
 import './SearchPage.css';
 
@@ -16,29 +16,43 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Autocomplete state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [acResults, setAcResults] = useState(null);
+  const [acLoading, setAcLoading] = useState(false);
+  const [trending, setTrending] = useState([]);
+  const debounceRef = useRef(null);
+  const formRef = useRef(null);
+
+  // Fetch trending on mount
+  useEffect(() => {
+    client.get('/search/trending')
+      .then(res => setTrending(res.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (formRef.current && !formRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  // Sync input when URL query changes
+  useEffect(() => {
+    setInputValue(query);
+  }, [query]);
+
+  // Run full search when URL query changes
   useEffect(() => {
     if (!query || query.length < 2) {
       setResults(null);
       return;
     }
-
-    // Track search term in localStorage
-    try {
-      const stored = JSON.parse(localStorage.getItem('r4s_searches') || '[]');
-      const existing = stored.find(s => s.term.toLowerCase() === query.toLowerCase());
-      let updated;
-      if (existing) {
-        updated = stored.map(s =>
-          s.term.toLowerCase() === query.toLowerCase()
-            ? { ...s, count: s.count + 1 }
-            : s
-        );
-      } else {
-        updated = [{ term: query, count: 1 }, ...stored];
-      }
-      // Keep top 50
-      localStorage.setItem('r4s_searches', JSON.stringify(updated.slice(0, 50)));
-    } catch (_) {}
 
     const doSearch = async () => {
       setLoading(true);
@@ -59,16 +73,59 @@ const SearchPage = () => {
     doSearch();
   }, [query]);
 
+  // Autocomplete as-you-type
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setDropdownOpen(true);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (val.trim().length < 2) {
+      setAcResults(null);
+      setAcLoading(false);
+      return;
+    }
+
+    setAcLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await client.get(`/search/autocomplete?q=${encodeURIComponent(val.trim())}`);
+        setAcResults(res.data.data);
+      } catch (_) {
+        setAcResults(null);
+      } finally {
+        setAcLoading(false);
+      }
+    }, 250);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = inputValue.trim();
+    setDropdownOpen(false);
     if (trimmed.length >= 2) {
       setSearchParams({ q: trimmed });
     }
   };
 
+  const handleTrendingClick = (term) => {
+    setInputValue(term);
+    setDropdownOpen(false);
+    setSearchParams({ q: term });
+  };
+
+  const handleAcItemClick = (path) => {
+    setDropdownOpen(false);
+    navigate(path);
+  };
+
   const totalCount = results
     ? (results.resources?.length || 0) + (results.guides?.length || 0) + (results.articles?.length || 0)
+    : 0;
+
+  const acTotal = acResults
+    ? (acResults.resources?.length || 0) + (acResults.guides?.length || 0) + (acResults.articles?.length || 0)
     : 0;
 
   return (
@@ -81,19 +138,88 @@ const SearchPage = () => {
         <h2 className="search-page-title">{t('search.title')}</h2>
       </div>
 
-      <form className="search-page-form" onSubmit={handleSubmit}>
+      <form className="search-page-form" onSubmit={handleSubmit} ref={formRef}>
         <div className="search-page-input-wrap">
           <Search size={18} className="search-page-icon" />
           <input
             className="search-page-input"
             type="text"
             value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
+            onChange={handleInputChange}
+            onFocus={() => setDropdownOpen(true)}
             placeholder={t('search.placeholder')}
             autoFocus
+            autoComplete="off"
           />
           <button type="submit" className="search-page-btn">{t('search.searchBtn')}</button>
         </div>
+
+        {/* Autocomplete dropdown */}
+        {dropdownOpen && (
+          <div className="search-page-dropdown">
+            {inputValue.trim().length < 2 ? (
+              // Show trending when empty
+              trending.length > 0 ? (
+                <>
+                  <div className="search-drop-section-label">
+                    <TrendingUp size={12} style={{ marginRight: 5 }} />
+                    {t('search.trending')}
+                  </div>
+                  {trending.map((item, i) => (
+                    <div
+                      key={item.term}
+                      className="search-drop-item"
+                      onMouseDown={() => handleTrendingClick(item.term)}
+                    >
+                      <span className="drop-trending-rank">#{i + 1}</span>
+                      <span style={{ flex: 1 }}>{item.term}</span>
+                      {item.count > 0 && <span className="drop-tag">{item.count}</span>}
+                    </div>
+                  ))}
+                </>
+              ) : null
+            ) : acLoading ? (
+              <div className="search-drop-loading">{t('common.loading')}</div>
+            ) : acTotal === 0 ? (
+              <div className="search-drop-loading" style={{ color: 'var(--color-text-secondary)' }}>
+                {t('search.noResults', { q: inputValue.trim() })}
+              </div>
+            ) : (
+              <>
+                {acResults?.resources?.map(r => (
+                  <div key={`r-${r.id}`} className="search-drop-item"
+                    onMouseDown={() => handleAcItemClick(`/resources/${r.id}`)}>
+                    <Globe size={13} className="drop-icon" />
+                    <span style={{ flex: 1 }}>{r.title}</span>
+                    <span className="drop-tag">{t('nav.resources')}</span>
+                  </div>
+                ))}
+                {acResults?.guides?.map(g => (
+                  <div key={`g-${g.id}`} className="search-drop-item"
+                    onMouseDown={() => handleAcItemClick(`/guides/${g.id}`)}>
+                    <FileText size={13} className="drop-icon" />
+                    <span style={{ flex: 1 }}>{g.title}</span>
+                    <span className="drop-tag">{t('nav.guides')}</span>
+                  </div>
+                ))}
+                {acResults?.articles?.map(a => (
+                  <div key={`a-${a.id}`} className="search-drop-item"
+                    onMouseDown={() => handleAcItemClick(`/knowledge/articles/${a.id}`)}>
+                    <BookOpen size={13} className="drop-icon" />
+                    <span style={{ flex: 1 }}>{a.title}</span>
+                    <span className="drop-tag">{t('nav.knowledge')}</span>
+                  </div>
+                ))}
+                <div
+                  className="search-drop-viewall"
+                  onMouseDown={handleSubmit}
+                >
+                  {t('search.viewAllResults')}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </form>
 
       {loading && <div className="search-status">{t('common.loading')}</div>}
@@ -173,7 +299,31 @@ const SearchPage = () => {
       )}
 
       {!loading && !results && !error && query.length < 2 && (
-        <div className="search-status search-hint">{t('search.hint')}</div>
+        <div className="search-status search-hint">
+          {trending.length > 0 ? (
+            <div className="search-trending-section">
+              <div className="search-trending-title">
+                <TrendingUp size={16} style={{ marginRight: 6, color: 'var(--color-primary)' }} />
+                {t('search.trending')}
+              </div>
+              <div className="search-trending-list">
+                {trending.map((item, i) => (
+                  <button
+                    key={item.term}
+                    className="search-trending-chip"
+                    onClick={() => handleTrendingClick(item.term)}
+                  >
+                    <span className="search-trending-chip-rank">#{i + 1}</span>
+                    <span>{item.term}</span>
+                    {item.count > 0 && <span className="search-trending-chip-count">{item.count} lượt</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            t('search.hint')
+          )}
+        </div>
       )}
     </div>
   );

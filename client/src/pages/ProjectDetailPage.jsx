@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   ArrowLeft, Users, Calendar, Heart,
   MessageSquare, Flag, Image as ImageIcon, X, AlertCircle, Plus, CheckCircle, UserMinus, FileText,
-  Pencil, Check, Bold, Italic, Strikethrough, Heading2, Code, List, ListOrdered, Quote, Eye, EyeOff
+  Pencil, Check, Bold, Italic, Strikethrough, Heading2, Code, List, ListOrdered, Quote, Eye, EyeOff, Trash2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import client from '../api/client';
@@ -141,7 +141,19 @@ const ProjectDetailPage = () => {
   // Member checking
   const projectOwner = members.find(m => m.role === 'owner');
   const isOwner = user && projectOwner && projectOwner.user_id === user.id;
+  const canManage = isOwner || (user && (user.role === 'admin' || user.role === 'teacher'));
   const isMember = user && members.some(m => m.user_id === user.id);
+
+  const handleDeleteProject = async () => {
+    if (!window.confirm('Bạn có chắc muốn xóa nhóm dự án này? Toàn bộ bài viết trong nhóm cũng sẽ bị xóa.')) return;
+    try {
+      await client.delete(`/community/projects/${id}`);
+      navigate('/community/projects');
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      alert(err.response?.data?.error?.message || 'Xóa dự án thất bại, vui lòng thử lại.');
+    }
+  };
 
   const openEditProject = () => {
     setEditName(project.name || '');
@@ -475,6 +487,12 @@ const ProjectDetailPage = () => {
                     <button className="btn-edit-project" onClick={openEditProject} title="Chỉnh sửa dự án">
                       <Pencil size={13} />
                       <span>Chỉnh sửa</span>
+                    </button>
+                  )}
+                  {canManage && (
+                    <button className="btn-delete-project" onClick={handleDeleteProject} title="Xóa dự án">
+                      <Trash2 size={13} />
+                      <span>Xóa</span>
                     </button>
                   )}
                 </div>
