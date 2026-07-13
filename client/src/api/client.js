@@ -24,11 +24,23 @@ client.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // Auth endpoints (login, register, /auth/me...) return 401 on bad credentials;
+    // the pages handle those errors themselves, so never force-redirect for them.
+    const requestUrl = error.config?.url || '';
+    const isAuthRequest = requestUrl.includes('/auth/');
+
+    if (error.response && error.response.status === 401 && !isAuthRequest) {
       console.warn('Session expired or unauthorized. Logging out...');
       localStorage.removeItem('r4s_token');
-      // Redirect to login page
-      window.location.href = '/login';
+      localStorage.removeItem('r4s_user');
+
+      // Inside the admin area, return to the admin console (it renders its own
+      // login screen) instead of the student login page.
+      const adminRoute = import.meta.env.VITE_ADMIN_ROUTE || '/portal-mgmt-7f3a';
+      const target = window.location.pathname.startsWith(adminRoute) ? adminRoute : '/login';
+      if (window.location.pathname !== target) {
+        window.location.href = target;
+      }
     }
     return Promise.reject(error);
   }
