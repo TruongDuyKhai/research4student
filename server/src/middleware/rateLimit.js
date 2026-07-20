@@ -1,38 +1,13 @@
-const rateLimit = require('express-rate-limit');
+// NOTE: Rate limiting temporarily disabled for demo.
+// These limiters are no-op pass-through middleware so no request is ever
+// throttled. To restore protection, revert this file to the version that
+// configures express-rate-limit (see git history).
 
-const customHandler = (req, res) => {
-  return res.status(429).json({
-    error: {
-      code: 'RATE_LIMITED',
-      message: 'Too many requests, please try again later.'
-    }
-  });
-};
+const noopLimiter = (req, res, next) => next();
 
-const apiLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 5000,
-  handler: customHandler,
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-const writeLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 1000,
-  handler: customHandler,
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-const authLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 200,
-  skipSuccessfulRequests: true,
-  handler: customHandler,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+const apiLimiter = noopLimiter;
+const writeLimiter = noopLimiter;
+const authLimiter = noopLimiter;
 
 module.exports = {
   apiLimiter,
