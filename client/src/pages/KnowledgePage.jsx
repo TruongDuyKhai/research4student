@@ -261,7 +261,7 @@ const KnowledgePage = () => {
                     >
                       <div className="subject-header-left">
                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        <span title={sub.name} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                           {sub.name}
                         </span>
                       </div>
@@ -322,6 +322,7 @@ const KnowledgePage = () => {
                               <button
                                 className={`topic-btn ${selectedTopic?.id === topic.id ? 'active' : ''}`}
                                 onClick={() => handleTopicSelect(sub, topic)}
+                                title={topic.name}
                               >
                                 {topic.name}
                               </button>

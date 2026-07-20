@@ -86,12 +86,18 @@
   align-items: center;
   gap: 8px;
   flex-grow: 1;
+  min-width: 0;
+}
+
+.subject-header-left svg {
+  flex-shrink: 0;
 }
 
 .subject-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .btn-add-topic {
