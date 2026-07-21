@@ -37,6 +37,8 @@ const migrations = [
   [connections.knowledgeDb,  "ALTER TABLE articles ADD COLUMN min_level INTEGER NOT NULL DEFAULT 1"],
   [connections.guidesDb,     "ALTER TABLE guides ADD COLUMN min_level INTEGER NOT NULL DEFAULT 1"],
   [connections.resourcesDb,  "ALTER TABLE research_websites ADD COLUMN min_level INTEGER NOT NULL DEFAULT 1"],
+  [connections.filesDb,      "ALTER TABLE files ADD COLUMN refresh_failed_at TEXT"],
+  [connections.filesDb,      "ALTER TABLE files ADD COLUMN is_dead INTEGER NOT NULL DEFAULT 0"],
 ];
 for (const [db, sql] of migrations) {
   try { db.exec(sql); } catch (_) { /* column already exists */ }

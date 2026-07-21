@@ -1,5 +1,6 @@
 const express = require('express');
-const { resourcesDb, filesDb } = require('../db/connections');
+const { resourcesDb } = require('../db/connections');
+const { fileUrlById } = require('../services/discordStorage');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { toJSON, fromJSON } = require('../utils/jsonField');
 const { verifyToken } = require('../utils/jwt');
@@ -23,7 +24,7 @@ function parseOptionalAuth(req) {
 }
 
 /**
- * Helper to fetch complete website resource info with resolved files cdn_urls and parsed arrays
+ * Helper to fetch complete website resource info with resolved file URLs and parsed arrays
  * @param {number} id
  * @returns {object|null}
  */
@@ -31,11 +32,7 @@ function getResourceDetail(id) {
   const item = resourcesDb.prepare('SELECT * FROM research_websites WHERE id = ?').get(id);
   if (!item) return null;
 
-  let iconUrl = null;
-  if (item.icon_file_id) {
-    const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(item.icon_file_id);
-    iconUrl = file ? file.cdn_url : null;
-  }
+  const iconUrl = fileUrlById(item.icon_file_id);
 
   return {
     ...item,
@@ -95,11 +92,7 @@ router.get('/', (req, res) => {
 
     // Resolve icon_urls
     const formattedList = list.map(item => {
-      let iconUrl = null;
-      if (item.icon_file_id) {
-        const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(item.icon_file_id);
-        iconUrl = file ? file.cdn_url : null;
-      }
+      const iconUrl = fileUrlById(item.icon_file_id);
       const minLevel = item.min_level != null ? item.min_level : 1;
       let locked = false;
       if (minLevel > 0 && resUserLevel === null) locked = true;

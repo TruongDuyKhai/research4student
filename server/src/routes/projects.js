@@ -2,9 +2,9 @@ const express = require("express");
 const {
     communityDb,
     usersDb,
-    filesDb,
     moderationDb,
 } = require("../db/connections");
+const { fileUrlById } = require("../services/discordStorage");
 const {
     requireAuth,
     cooldown,
@@ -71,13 +71,7 @@ router.get("/", (req, res) => {
                     "SELECT id, username, display_name, avatar_file_id FROM users WHERE id = ?",
                 )
                 .get(proj.owner_id);
-            let avatarUrl = null;
-            if (owner && owner.avatar_file_id) {
-                const file = filesDb
-                    .prepare("SELECT cdn_url FROM files WHERE id = ?")
-                    .get(owner.avatar_file_id);
-                avatarUrl = file ? file.cdn_url : null;
-            }
+            const avatarUrl = fileUrlById(owner?.avatar_file_id);
 
             return {
                 ...proj,
@@ -140,13 +134,7 @@ router.get("/invites/me", requireAuth, (req, res) => {
                     "SELECT id, username, display_name, avatar_file_id FROM users WHERE id = ?",
                 )
                 .get(invite.invited_by);
-            let avatarUrl = null;
-            if (inviter && inviter.avatar_file_id) {
-                const file = filesDb
-                    .prepare("SELECT cdn_url FROM files WHERE id = ?")
-                    .get(inviter.avatar_file_id);
-                avatarUrl = file ? file.cdn_url : null;
-            }
+            const avatarUrl = fileUrlById(inviter?.avatar_file_id);
 
             return {
                 ...invite,
@@ -305,13 +293,7 @@ router.get("/:id", (req, res) => {
                     "SELECT id, username, display_name, avatar_file_id FROM users WHERE id = ?",
                 )
                 .get(row.user_id);
-            let avatarUrl = null;
-            if (user && user.avatar_file_id) {
-                const file = filesDb
-                    .prepare("SELECT cdn_url FROM files WHERE id = ?")
-                    .get(user.avatar_file_id);
-                avatarUrl = file ? file.cdn_url : null;
-            }
+            const avatarUrl = fileUrlById(user?.avatar_file_id);
             return {
                 user_id: row.user_id,
                 username: user ? user.username : null,
@@ -824,13 +806,7 @@ router.get("/:id/posts", (req, res) => {
                     "SELECT username, display_name, avatar_file_id FROM users WHERE id = ?",
                 )
                 .get(post.author_id);
-            let avatarUrl = null;
-            if (author && author.avatar_file_id) {
-                const file = filesDb
-                    .prepare("SELECT cdn_url FROM files WHERE id = ?")
-                    .get(author.avatar_file_id);
-                avatarUrl = file ? file.cdn_url : null;
-            }
+            const avatarUrl = fileUrlById(author?.avatar_file_id);
 
             return {
                 ...post,

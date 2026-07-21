@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { requireAuth } = require('../middleware/auth');
-const { uploadFile, getFileById, refreshFileUrl } = require('../services/discordStorage');
+const { uploadFile, getFileById, getFreshCdnUrl, fileUrlById } = require('../services/discordStorage');
 const features = require('../config/features');
 
 const router = express.Router();
@@ -97,7 +97,11 @@ router.post('/upload', requireAuth, (req, res, next) => {
       });
 
       return res.status(201).json({
-        data: dbRecord
+        data: {
+          ...dbRecord,
+          // Hand back the stable proxy URL, never the signed Discord one.
+          cdn_url: fileUrlById(dbRecord.id)
+        }
       });
     } catch (uploadError) {
       console.error('Discord storage upload failure:', uploadError.message);
@@ -112,14 +116,53 @@ router.post('/upload', requireAuth, (req, res, next) => {
 });
 
 /**
+ * GET /api/files/:id/raw
+ * Permanent URL for a stored file. Resolves a currently valid Discord CDN URL
+ * (re-signing on demand) and redirects to it, so pages can embed this address
+ * indefinitely without ever holding an expired Discord signature.
+ */
+router.get('/:id/raw', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const file = getFileById(id);
+    if (!file) {
+      return res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'File not found' }
+      });
+    }
+
+    const url = await getFreshCdnUrl(file);
+    if (!url) {
+      return res.status(410).json({
+        error: { code: 'FILE_UNAVAILABLE', message: 'File is no longer available in storage' }
+      });
+    }
+
+    // Short cache so browsers reuse the redirect for a while, but always well
+    // inside the lifetime of the signature it points at.
+    res.set('Cache-Control', 'public, max-age=300');
+    // Helmet defaults to same-origin, which would block this from a client
+    // served on another origin (the PUBLIC_FILE_BASE_URL setup).
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    return res.redirect(302, url);
+  } catch (error) {
+    console.error('File redirect error:', error.message);
+    return res.status(500).json({
+      error: { code: 'SERVER_ERROR', message: 'An error occurred while resolving the file' }
+    });
+  }
+});
+
+/**
  * GET /api/files/:id
- * Retrieve details of a file, automatically refreshing URL from Discord if expired.
+ * Retrieve details of a file.
  */
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    let file = getFileById(id);
+    const file = getFileById(id);
     if (!file) {
       return res.status(404).json({
         error: {
@@ -129,22 +172,10 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Verify CDN URL expiry status
-    const now = new Date();
-    const isExpired = file.cdn_url_expires_at && new Date(file.cdn_url_expires_at) <= now;
-    if (isExpired) {
-      try {
-        await refreshFileUrl(file);
-        file = getFileById(file.id);
-      } catch (refreshError) {
-        console.error(`Failed to refresh expired CDN URL for file ID ${file.id}:`, refreshError.message);
-      }
-    }
-
     return res.status(200).json({
       data: {
         id: file.id,
-        cdn_url: file.cdn_url,
+        cdn_url: fileUrlById(file.id),
         mime_type: file.mime_type,
         purpose: file.purpose,
         original_name: file.original_name

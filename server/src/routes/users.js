@@ -1,9 +1,9 @@
 const express = require('express');
 const multer = require('multer');
-const { usersDb, filesDb } = require('../db/connections');
+const { usersDb } = require('../db/connections');
 const usersModel = require('../models/usersModel');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { uploadFile } = require('../services/discordStorage');
+const { uploadFile, fileUrlById } = require('../services/discordStorage');
 const features = require('../config/features');
 
 const router = express.Router();
@@ -227,7 +227,7 @@ router.post('/me/avatar', requireAuth, blockAdmin, (req, res, next) => {
       return res.status(200).json({
         data: {
           avatar_file_id: dbRecord.id,
-          avatar_url: dbRecord.cdn_url
+          avatar_url: fileUrlById(dbRecord.id)
         }
       });
     } catch (uploadError) {
@@ -268,11 +268,7 @@ router.get('/:username', (req, res) => {
       });
     }
 
-    profile.avatar_url = null;
-    if (profile.avatar_file_id) {
-      const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(profile.avatar_file_id);
-      if (file) profile.avatar_url = file.cdn_url;
-    }
+    profile.avatar_url = fileUrlById(profile.avatar_file_id);
     delete profile.avatar_file_id;
 
     if (profile.role !== 'teacher') {

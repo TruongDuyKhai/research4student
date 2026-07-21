@@ -29,5 +29,7 @@ Các cấu hình hệ thống ở môi trường Development và Production đư
 | `DISCORD_BOT_TOKEN` | Mã Token kết nối với Bot Discord để lưu trữ tệp CDN. | `server/src/services/discordClient.js`, `server/src/config/features.js` | `(Để trống mặc định)` |
 | `DISCORD_STORAGE_CHANNEL_ID` | ID của Text Channel dùng làm kho lưu trữ CDN tệp tin đính kèm. | `server/src/services/discordStorage.js`, `server/src/config/features.js` | `(Để trống mặc định)` |
 | `MAX_UPLOAD_SIZE_MB` | Kích thước tệp tin tối đa (MB) cho phép tải lên hệ thống. | `server/src/routes/files.js`, `server/src/routes/users.js` | `10` |
-| `CDN_REFRESH_CRON` | Chu kỳ cron tự động chạy nền làm mới các tệp Discord CDN hết hạn. | `server/src/services/cdnRefresher.js` | `0 */12 * * *` |
+| `CDN_REFRESH_CRON` | Chu kỳ cron tự động chạy nền làm mới các tệp Discord CDN hết hạn. | `server/src/services/cdnRefresher.js` | `*/10 * * * *` |
+| `CDN_REFRESH_MARGIN_MINUTES` | Ký lại URL trước thời điểm hết hạn bao nhiêu phút. | `server/src/services/discordStorage.js` | `60` |
+| `PUBLIC_FILE_BASE_URL` | Origin tuyệt đối của API, chỉ cần khi Client và Server khác domain. Để trống sẽ phát URL tương đối `/api/files/:id/raw`. | `server/src/services/discordStorage.js` | `(Để trống mặc định)` |
 | `TURNSTILE_SECRET_KEY` | Khóa bí mật dùng để gửi yêu cầu xác minh Captcha lên Cloudflare. | `server/src/middleware/turnstile.js`, `server/src/config/features.js` | `(Để trống mặc định)` |

@@ -1,7 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { usersDb, moderationDb, communityDb, filesDb, knowledgeDb } = require('../db/connections');
+const { usersDb, moderationDb, communityDb, knowledgeDb } = require('../db/connections');
+const { fileUrlById } = require('../services/discordStorage');
 const { requireAuth, requireRole } = require('../middleware');
 const usersModel = require('../models/usersModel');
 
@@ -23,11 +24,7 @@ function getReporterInfo(reporterId) {
   }
   const user = usersDb.prepare('SELECT id, username, display_name, avatar_file_id FROM users WHERE id = ?').get(reporterId);
   if (!user) return null;
-  let avatarUrl = null;
-  if (user.avatar_file_id) {
-    const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(user.avatar_file_id);
-    avatarUrl = file ? file.cdn_url : null;
-  }
+  const avatarUrl = fileUrlById(user.avatar_file_id);
   return {
     id: user.id,
     username: user.username,

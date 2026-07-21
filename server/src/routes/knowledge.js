@@ -1,5 +1,6 @@
 const express = require('express');
 const { knowledgeDb, filesDb } = require('../db/connections');
+const { fileUrlById } = require('../services/discordStorage');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { verifyToken } = require('../utils/jwt');
 const usersModel = require('../models/usersModel');
@@ -489,20 +490,15 @@ router.get('/articles', (req, res) => {
       return getLevel(usersModel.findById(reqUser.id)?.level_points || 0);
     })();
 
-    // Map files cdn_urls and locked state
+    // Map file URLs and locked state
     const articlesWithFiles = articles.map(art => {
-      let pdfUrl = null;
-      if (art.pdf_file_id) {
-        const file = filesDb.prepare('SELECT cdn_url FROM files WHERE id = ?').get(art.pdf_file_id);
-        pdfUrl = file ? file.cdn_url : null;
-      }
       const artMinLevel = art.min_level != null ? art.min_level : 1;
       let artLocked = false;
       if (artMinLevel > 0 && listUserLevel === null) artLocked = true;
       else if (artMinLevel >= 2 && listUserLevel !== null && listUserLevel < artMinLevel) artLocked = true;
       return {
         ...art,
-        pdf_url: pdfUrl,
+        pdf_url: artLocked ? null : fileUrlById(art.pdf_file_id),
         locked: artLocked
       };
     });
@@ -584,9 +580,9 @@ router.get('/articles/:id', (req, res) => {
     let pdfUrl = null;
     let originalName = null;
     if (!locked && article.pdf_file_id) {
-      const file = filesDb.prepare('SELECT cdn_url, original_name FROM files WHERE id = ?').get(article.pdf_file_id);
+      const file = filesDb.prepare('SELECT original_name FROM files WHERE id = ?').get(article.pdf_file_id);
       if (file) {
-        pdfUrl = file.cdn_url;
+        pdfUrl = fileUrlById(article.pdf_file_id);
         originalName = file.original_name;
       }
     }

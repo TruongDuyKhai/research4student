@@ -1,7 +1,7 @@
 const express = require('express');
 const { guidesDb } = require('../db/connections');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { getFileById, refreshFileUrl } = require('../services/discordStorage');
+const { getFileById, getFreshCdnUrl } = require('../services/discordStorage');
 const { verifyToken } = require('../utils/jwt');
 const usersModel = require('../models/usersModel');
 const { getLevel } = require('../utils/levelSystem');
@@ -191,21 +191,13 @@ router.get('/:id/download', requireAuth, async (req, res) => {
       });
     }
 
-    // Refresh URL if expired
-    const now = new Date();
-    const isExpired = file.cdn_url_expires_at && new Date(file.cdn_url_expires_at) <= now;
-    if (isExpired) {
-      try {
-        await refreshFileUrl(file);
-        file = getFileById(file.id);
-      } catch (refreshError) {
-        console.error(`Failed to refresh expired CDN URL for file ID ${file.id}:`, refreshError.message);
-      }
-    }
+    // This route is level-gated, so hand out a live Discord URL rather than the
+    // public /raw proxy. The client opens it right away, well within its lifetime.
+    const cdnUrl = await getFreshCdnUrl(file);
 
     return res.status(200).json({
       data: {
-        cdn_url: file.cdn_url,
+        cdn_url: cdnUrl,
         original_name: file.original_name
       }
     });

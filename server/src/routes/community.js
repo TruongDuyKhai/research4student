@@ -5,6 +5,7 @@ const {
     usersDb,
     filesDb,
 } = require("../db/connections");
+const { fileUrlById } = require("../services/discordStorage");
 const {
     requireAuth,
     requireRole,
@@ -57,13 +58,7 @@ function getAuthorInfo(authorId) {
             "SELECT username, display_name, avatar_file_id FROM users WHERE id = ?",
         )
         .get(authorId);
-    let avatarUrl = null;
-    if (author && author.avatar_file_id) {
-        const file = filesDb
-            .prepare("SELECT cdn_url FROM files WHERE id = ?")
-            .get(author.avatar_file_id);
-        avatarUrl = file ? file.cdn_url : null;
-    }
+    const avatarUrl = fileUrlById(author?.avatar_file_id);
     return author
         ? {
               username: author.username,
@@ -158,13 +153,7 @@ router.get("/posts", (req, res) => {
                 )
                 .get(post.id);
 
-            let attachmentUrl = null;
-            if (post.attachment_file_id) {
-                const file = filesDb
-                    .prepare("SELECT cdn_url FROM files WHERE id = ?")
-                    .get(post.attachment_file_id);
-                attachmentUrl = file ? file.cdn_url : null;
-            }
+            const attachmentUrl = fileUrlById(post.attachment_file_id);
 
             return {
                 ...post,
@@ -230,12 +219,10 @@ router.get("/posts/:id", (req, res) => {
         let attachmentName = null;
         if (post.attachment_file_id) {
             const file = filesDb
-                .prepare(
-                    "SELECT cdn_url, original_name FROM files WHERE id = ?",
-                )
+                .prepare("SELECT original_name FROM files WHERE id = ?")
                 .get(post.attachment_file_id);
             if (file) {
-                attachmentUrl = file.cdn_url;
+                attachmentUrl = fileUrlById(post.attachment_file_id);
                 attachmentName = file.original_name;
             }
         }
